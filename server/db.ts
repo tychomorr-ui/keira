@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, facts, ontologyClasses, ontologyProperties, semanticIndex, Fact, OntologyClass, OntologyProperty, SemanticIndexEntry } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,197 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Knowledge Graph Queries
+
+export async function addFact(userId: number, subject: string, predicate: string, object: string): Promise<Fact | null> {
+  const db = await getDb();
+  if (!db) return null;
+  
+  try {
+    const result = await db.insert(facts).values({
+      userId,
+      subject,
+      predicate,
+      object,
+    });
+    const inserted = await db.select().from(facts).where(eq(facts.userId, userId)).orderBy(facts.id).limit(1);
+    return inserted.length > 0 ? inserted[inserted.length - 1] : null;
+  } catch (error) {
+    console.error("[Database] Failed to add fact:", error);
+    return null;
+  }
+}
+
+export async function removeFact(userId: number, subject: string, predicate: string, object: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  try {
+    await db.delete(facts).where(
+      and(
+        eq(facts.userId, userId),
+        eq(facts.subject, subject),
+        eq(facts.predicate, predicate),
+        eq(facts.object, object)
+      )
+    );
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to remove fact:", error);
+    return false;
+  }
+}
+
+export async function getFacts(userId: number, subject?: string, predicate?: string, object?: string): Promise<Fact[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    const conditions = [eq(facts.userId, userId)];
+    
+    if (subject) {
+      conditions.push(eq(facts.subject, subject));
+    }
+    if (predicate) {
+      conditions.push(eq(facts.predicate, predicate));
+    }
+    if (object) {
+      conditions.push(eq(facts.object, object));
+    }
+    
+    return await db.select().from(facts).where(and(...conditions));
+  } catch (error) {
+    console.error("[Database] Failed to get facts:", error);
+    return [];
+  }
+}
+
+export async function defineClass(userId: number, className: string, parentClassName?: string): Promise<OntologyClass | null> {
+  const db = await getDb();
+  if (!db) return null;
+  
+  try {
+    await db.insert(ontologyClasses).values({
+      userId,
+      className,
+      parentClassName: parentClassName || null,
+    });
+    const result = await db.select().from(ontologyClasses).where(
+      and(eq(ontologyClasses.userId, userId), eq(ontologyClasses.className, className))
+    ).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to define class:", error);
+    return null;
+  }
+}
+
+export async function getClasses(userId: number): Promise<OntologyClass[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(ontologyClasses).where(eq(ontologyClasses.userId, userId));
+  } catch (error) {
+    console.error("[Database] Failed to get classes:", error);
+    return [];
+  }
+}
+
+export async function defineProperty(userId: number, propertyName: string, domain?: string, range?: string): Promise<OntologyProperty | null> {
+  const db = await getDb();
+  if (!db) return null;
+  
+  try {
+    await db.insert(ontologyProperties).values({
+      userId,
+      propertyName,
+      domain: domain || null,
+      range: range || null,
+    });
+    const result = await db.select().from(ontologyProperties).where(
+      and(eq(ontologyProperties.userId, userId), eq(ontologyProperties.propertyName, propertyName))
+    ).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to define property:", error);
+    return null;
+  }
+}
+
+export async function getProperties(userId: number): Promise<OntologyProperty[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    return await db.select().from(ontologyProperties).where(eq(ontologyProperties.userId, userId));
+  } catch (error) {
+    console.error("[Database] Failed to get properties:", error);
+    return [];
+  }
+}
+
+export async function associateInstance(userId: number, instanceName: string, className: string): Promise<SemanticIndexEntry | null> {
+  const db = await getDb();
+  if (!db) return null;
+  
+  try {
+    await db.insert(semanticIndex).values({
+      userId,
+      instanceName,
+      className,
+    });
+    const result = await db.select().from(semanticIndex).where(
+      and(eq(semanticIndex.userId, userId), eq(semanticIndex.instanceName, instanceName), eq(semanticIndex.className, className))
+    ).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error("[Database] Failed to associate instance:", error);
+    return null;
+  }
+}
+
+export async function getEntityTypes(userId: number, instanceName: string): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  try {
+    const results = await db.select().from(semanticIndex).where(
+      and(eq(semanticIndex.userId, userId), eq(semanticIndex.instanceName, instanceName))
+    );
+    return results.map(r => r.className);
+  } catch (error) {
+    console.error("[Database] Failed to get entity types:", error);
+    return [];
+  }
+}
+
+export async function removeClass(userId: number, className: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  try {
+    await db.delete(ontologyClasses).where(
+      and(eq(ontologyClasses.userId, userId), eq(ontologyClasses.className, className))
+    );
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to remove class:", error);
+    return false;
+  }
+}
+
+export async function removeProperty(userId: number, propertyName: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  
+  try {
+    await db.delete(ontologyProperties).where(
+      and(eq(ontologyProperties.userId, userId), eq(ontologyProperties.propertyName, propertyName))
+    );
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to remove property:", error);
+    return false;
+  }
+}

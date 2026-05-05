@@ -1,5 +1,27 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1777945749449,
+      "tag": "0000_stale_cerebro",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1777990562647,
+      "tag": "0001_fancy_the_call",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1777992379653,
+      "tag": "0002_true_layla_miller",
+      "breakpoints": true
+    }
+  ]
 }

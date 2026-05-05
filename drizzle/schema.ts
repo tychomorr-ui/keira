@@ -25,4 +25,86 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// Knowledge Graph Tables
+
+/**
+ * Facts table: stores triples (subject, predicate, object)
+ */
+export const facts = mysqlTable("facts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  predicate: varchar("predicate", { length: 255 }).notNull(),
+  object: varchar("object", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Fact = typeof facts.$inferSelect;
+export type InsertFact = typeof facts.$inferInsert;
+
+/**
+ * Ontology Classes table: stores class definitions
+ */
+export const ontologyClasses = mysqlTable("ontologyClasses", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  className: varchar("className", { length: 255 }).notNull(),
+  parentClassName: varchar("parentClassName", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OntologyClass = typeof ontologyClasses.$inferSelect;
+export type InsertOntologyClass = typeof ontologyClasses.$inferInsert;
+
+/**
+ * Ontology Properties table: stores property definitions
+ */
+export const ontologyProperties = mysqlTable("ontologyProperties", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  propertyName: varchar("propertyName", { length: 255 }).notNull(),
+  domain: varchar("domain", { length: 255 }),
+  range: varchar("range", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OntologyProperty = typeof ontologyProperties.$inferSelect;
+export type InsertOntologyProperty = typeof ontologyProperties.$inferInsert;
+
+/**
+ * Semantic Index table: associates instances with classes
+ */
+export const semanticIndex = mysqlTable("semanticIndex", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  instanceName: varchar("instanceName", { length: 255 }).notNull(),
+  className: varchar("className", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SemanticIndexEntry = typeof semanticIndex.$inferSelect;
+export type InsertSemanticIndexEntry = typeof semanticIndex.$inferInsert;
+
+/**
+ * Mirror Reflections table: stores Mirror analysis results
+ */
+export const mirrorReflections = mysqlTable("mirrorReflections", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  userInput: text("userInput").notNull(),
+  reflection: text("reflection").notNull(),
+  patterns: text("patterns"), // JSON array of detected patterns
+  unityScore: int("unityScore").notNull(), // 0-100
+  opportunityScore: int("opportunityScore").notNull(), // 0-100
+  resistanceLevel: int("resistanceLevel").notNull(), // 0-100
+  nextStep: text("nextStep").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type MirrorReflection = typeof mirrorReflections.$inferSelect;
+export type InsertMirrorReflection = typeof mirrorReflections.$inferInsert;
