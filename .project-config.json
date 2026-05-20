@@ -1,0 +1,43 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [
+    "db",
+    "server",
+    "user"
+  ],
+  "dev_command": "pnpm run dev",
+  "env_vars": {
+    "DATABASE_URL": "mysql://2zfFsJU6j5kyJ9M.root:7wa6DMt00CCeX76UdmNr@gateway06.us-east-1.prod.aws.tidbcloud.com:4000/hKCGwyE7WuTJBF8owbhcsP?ssl={\"rejectUnauthorized\":true}"
+  },
+  "experiments": [
+    "no_db_push"
+  ],
+  "git_remote": {
+    "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663613736850/hKCGwyE7WuTJBF8owbhcsP",
+    "access_key_id": "ASIAZV3A2ECZKMW36NCK",
+    "secret_access_key": "mL2RyJuN+D91OZGDgU1AhQK4mAr+d9cDANEPjEOz",
+    "session_token": "IQoJb3JpZ2luX2VjEJn//////////wEaCXVzLWVhc3QtMSJIMEYCIQDb1Ym7eKjUjNMHImQZglMNNw5osfomsWDvkFU6OZhneAIhAJlgvcHAOL+eo7ZDfphQi8dsJ/7WRMUXw27UuBcaQRcyKvYDCGIQBBoMNjY1Mzg2MDk4ODY2Igzbzck5sXS3DbfYv2Eq0wPwQsxjogvKXBOJ8MMpyEUp12G9vPI2+tC642ZxcVDIt/sjOtIOjkW58N4Cj99pLy+6vVG36mJ6KXSqzyJfrM7AVtPZRmbxU5q6XyecPrTtvNNpsWbQrNr2X+Flo1v2K1ju5yCMhHe3IhZsxVz6dRwVJTI/egl68T0+aje2CxmR52awaSTs7DQwypbyGKZuFVr3Ofy2wnRF8CbJ5cHADdhMCtAFncYKcIWulp/0y5yq4fAc3sjfEMeu7gDZr0Uf8ELhCxfF7RqnQY2fk3ugD1Zk3GMZeJ2vbTRMYI6Dz8jKQIyfngXwe31bPEOOvGPOw79RI1WKg2LcHrD4PN/C2IGFr2FNpO6RnqN3NWVxtdGpy+5PWP68Pz59SFSIhs2o8Iz8F/QQ42kZeJQyX9uWXC+JFuFi2/p6ER5m9/naFdmVQdqQGPOR8LRyMkveFvHLbkVN7IHzaZfSIAo0XIytrvF14mUSmxZuHKKHbGOd7tRccniLp2XJ0j85jSDnLCwOkHfj8vGl7muQgS62nZDqIa7Yp36zCtqcDUTUcTZfpSBzVbJHPsycyQBT/i3XT3qhVE2Z+esxRn0K/m+y+lX4VYeOnPsDIZQESYNjntyzRhLGNN8AIjDI95fQBjqcAdrmU3mIu50yhezKvw6YdgA+AvMd54ktEvWoEb5zqtiByn8RRMWZFZfKxMM604MNltTg6Rx/Pc5gDHXk2cRi5hOnfZpiT1tdpK5ozEcwJ2y9sJste8NKSlU28cBgBdQ/fAL08aq2lYKU/SA1LqcNSyL9nNiFvr45n5ati8AkBiiH88ISeD+mmOwYOgkUfxitFPGAL0x71RX+a+uNnA==",
+    "expiration": "2026-05-15T04:43:52.000Z"
+  },
+  "name": "sovereign-truth-engine-app",
+  "path": "/home/ubuntu/sovereign-truth-engine-app",
+  "port": 3000,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "k78ocw9GUbrCTwQMh5rq47",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "JWT_SECRET": "NcJsF8WUqAYVZvpGVXxiHV",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "Tycho Morr",
+    "OWNER_OPEN_ID": "JgPRztYRhgfvx8ixVUXEvw",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "7cf0ed5b-d013-46bc-8e43-e0b857b393b9",
+    "VITE_APP_ID": "hKCGwyE7WuTJBF8owbhcsP",
+    "VITE_APP_LOGO": "https://files.manuscdn.com/user_upload_by_module/web_dev_logo/310519663613736850/yWPCbvbxeqqFbLAu.png",
+    "VITE_APP_TITLE": "Sovereign Truth Engine",
+    "VITE_FRONTEND_FORGE_API_KEY": "TrRGLk8jzcw3ukexuydcRR",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-db-user",
+  "test_command": "pnpm test"
+}
