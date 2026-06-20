@@ -227,6 +227,105 @@ export const appRouter = router({
         };
       }),
   }),
+
+  // Subscription and Portal Router
+  subscription: router({
+    createCheckoutSession: protectedProcedure
+      .input(z.object({
+        tier: z.enum(["mirror", "portal"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { createCheckoutSession } = await import("./stripe");
+        const origin = ctx.req.headers.origin || "https://sovereignapp-hkcgwye7.manus.space";
+        
+        try {
+          const result = await createCheckoutSession(
+            ctx.user.id,
+            ctx.user.email || "",
+            ctx.user.name || "User",
+            input.tier,
+            origin
+          );
+          return result;
+        } catch (error) {
+          console.error("Checkout session creation failed:", error);
+          throw error;
+        }
+      }),
+
+    getSubscription: protectedProcedure
+      .query(async ({ ctx }) => {
+        const { getUserSubscription } = await import("./stripe");
+        return await getUserSubscription(ctx.user.id);
+      }),
+
+    updateTier: protectedProcedure
+      .input(z.object({
+        newTier: z.enum(["mirror", "portal"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { getUserSubscription, updateSubscriptionTier } = await import("./stripe");
+        const subscription = await getUserSubscription(ctx.user.id);
+        
+        if (!subscription) {
+          throw new Error("No active subscription");
+        }
+
+        const success = await updateSubscriptionTier(subscription.stripeSubscriptionId, input.newTier);
+        return { success };
+      }),
+
+    cancelSubscription: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const { getUserSubscription, cancelSubscription } = await import("./stripe");
+        const subscription = await getUserSubscription(ctx.user.id);
+        
+        if (!subscription) {
+          throw new Error("No active subscription");
+        }
+
+        const success = await cancelSubscription(subscription.stripeSubscriptionId);
+        return { success };
+      }),
+  }),
+
+  // Portal Router (Recursive, Reflective Intelligence)
+  portal: router({
+    reflect: protectedProcedure
+      .input(z.object({
+        input: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const { getUserSubscription } = await import("./stripe");
+        const { portalReflection } = await import("./portal");
+
+        // Check if user has Portal subscription
+        const subscription = await getUserSubscription(ctx.user.id);
+        if (!subscription || subscription.tier !== "portal") {
+          throw new Error("Portal access requires Portal subscription");
+        }
+
+        const result = await portalReflection(ctx.user.id, input.input);
+        if (!result) {
+          throw new Error("Portal reflection failed");
+        }
+        return result;
+      }),
+
+    getSummary: protectedProcedure
+      .query(async ({ ctx }) => {
+        const { getUserSubscription } = await import("./stripe");
+        const { getPortalSummary } = await import("./portal");
+
+        // Check if user has Portal subscription
+        const subscription = await getUserSubscription(ctx.user.id);
+        if (!subscription || subscription.tier !== "portal") {
+          return null;
+        }
+
+        return await getPortalSummary(ctx.user.id);
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

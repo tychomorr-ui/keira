@@ -6,6 +6,7 @@ import Mirror from "@/pages/Mirror";
 import GraphView from "@/pages/GraphView";
 import OntologyView from "@/pages/OntologyView";
 import InferenceView from "@/pages/InferenceView";
+import Subscription from "@/pages/Subscription";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -56,6 +57,7 @@ function Router() {
           <InferenceView />
         </TesseractLayout>
       </Route>
+      <Route path={"/subscription"} component={Subscription} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

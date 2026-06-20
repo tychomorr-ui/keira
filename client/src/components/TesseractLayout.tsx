@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, Zap, Network, Brain, Sparkles } from "lucide-react";
+import { Menu, X, LogOut, Zap, Network, Brain, Sparkles, Crown } from "lucide-react";
 import { getLoginUrl } from "@/const";
+import { useLocation } from "wouter";
 
 interface TesseractLayoutProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ export default function TesseractLayout({
 }: TesseractLayoutProps) {
   const { user, logout, isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [, navigate] = useLocation();
 
   if (!isAuthenticated) {
     return (
@@ -97,6 +99,13 @@ export default function TesseractLayout({
               <div className="truncate">{user?.email}</div>
             </div>
           )}
+          <button
+            onClick={() => navigate("/subscription")}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded text-slate-400 hover:bg-amber-600 hover:text-white transition-colors text-sm"
+          >
+            <Crown size={16} />
+            {sidebarOpen && "Subscription"}
+          </button>
           <button
             onClick={() => logout()}
             className="w-full flex items-center gap-2 px-3 py-2 rounded text-slate-400 hover:bg-slate-700 hover:text-white transition-colors text-sm"

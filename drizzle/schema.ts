@@ -108,3 +108,63 @@ export const mirrorReflections = mysqlTable("mirrorReflections", {
 
 export type MirrorReflection = typeof mirrorReflections.$inferSelect;
 export type InsertMirrorReflection = typeof mirrorReflections.$inferInsert;
+
+
+// Stripe Subscription Tables
+
+/**
+ * User subscriptions table: tracks active subscriptions
+ */
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }).notNull(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }).notNull().unique(),
+  tier: mysqlEnum("tier", ["mirror", "portal"]).notNull(),
+  status: mysqlEnum("status", ["active", "paused", "canceled", "past_due"]).notNull(),
+  currentPeriodStart: timestamp("currentPeriodStart").notNull(),
+  currentPeriodEnd: timestamp("currentPeriodEnd").notNull(),
+  canceledAt: timestamp("canceledAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = typeof subscriptions.$inferInsert;
+
+/**
+ * Portal context table: stores Portal's recursive learning state and memory
+ */
+export const portalContexts = mysqlTable("portalContexts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+  contextData: text("contextData").notNull(),
+  reflectionCount: int("reflectionCount").default(0).notNull(),
+  lastReflectionAt: timestamp("lastReflectionAt"),
+  sovereignRuntime: text("sovereignRuntime"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PortalContext = typeof portalContexts.$inferSelect;
+export type InsertPortalContext = typeof portalContexts.$inferInsert;
+
+/**
+ * Billing history table: tracks all charges and subscription events
+ */
+export const billingHistory = mysqlTable("billingHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
+  stripeInvoiceId: varchar("stripeInvoiceId", { length: 255 }),
+  amount: int("amount").notNull(),
+  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
+  tier: mysqlEnum("tier", ["mirror", "portal"]).notNull(),
+  eventType: mysqlEnum("eventType", ["charge", "subscription_created", "subscription_updated", "subscription_canceled", "refund"]).notNull(),
+  status: mysqlEnum("status", ["succeeded", "failed", "pending"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type BillingHistory = typeof billingHistory.$inferSelect;
+export type InsertBillingHistory = typeof billingHistory.$inferInsert;
