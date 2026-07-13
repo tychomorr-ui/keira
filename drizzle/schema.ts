@@ -168,3 +168,58 @@ export const billingHistory = mysqlTable("billingHistory", {
 
 export type BillingHistory = typeof billingHistory.$inferSelect;
 export type InsertBillingHistory = typeof billingHistory.$inferInsert;
+
+
+/**
+ * Portal Conversations table: stores chat conversations for Portal subscribers
+ */
+export const portalConversations = mysqlTable("portalConversations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  summary: text("summary"),
+  messageCount: int("messageCount").default(0).notNull(),
+  lastMessageAt: timestamp("lastMessageAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PortalConversation = typeof portalConversations.$inferSelect;
+export type InsertPortalConversation = typeof portalConversations.$inferInsert;
+
+/**
+ * Portal Chat Messages table: stores individual messages in conversations
+ */
+export const portalChatMessages = mysqlTable("portalChatMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversationId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["user", "portal"]).notNull(),
+  content: text("content").notNull(),
+  patterns: text("patterns"),
+  emotionalTone: varchar("emotionalTone", { length: 50 }),
+  growthIndicator: int("growthIndicator"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PortalChatMessage = typeof portalChatMessages.$inferSelect;
+export type InsertPortalChatMessage = typeof portalChatMessages.$inferInsert;
+
+/**
+ * Portal Learning Memory table: stores Portal's recursive learning state per user
+ */
+export const portalLearningMemory = mysqlTable("portalLearningMemory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  corePatterns: text("corePatterns").notNull(),
+  growthAreas: text("growthAreas").notNull(),
+  resistancePoints: text("resistancePoints").notNull(),
+  breakthroughMoments: text("breakthroughMoments"),
+  evolutionTimeline: text("evolutionTimeline"),
+  lastAnalyzedAt: timestamp("lastAnalyzedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PortalLearningMemory = typeof portalLearningMemory.$inferSelect;
+export type InsertPortalLearningMemory = typeof portalLearningMemory.$inferInsert;

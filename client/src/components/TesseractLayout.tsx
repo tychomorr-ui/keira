@@ -100,6 +100,13 @@ export default function TesseractLayout({
             </div>
           )}
           <button
+            onClick={() => navigate("/portal-chat")}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded text-slate-400 hover:bg-purple-600 hover:text-white transition-colors text-sm"
+          >
+            <Brain size={16} />
+            {sidebarOpen && "Portal Chat"}
+          </button>
+          <button
             onClick={() => navigate("/subscription")}
             className="w-full flex items-center gap-2 px-3 py-2 rounded text-slate-400 hover:bg-amber-600 hover:text-white transition-colors text-sm"
           >

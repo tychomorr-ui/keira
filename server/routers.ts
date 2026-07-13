@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { mirrorRouter } from "./mirror-router";
+import { portalChatRouter } from "./portal-chat-router";
 
 export const appRouter = router({
   system: systemRouter,
@@ -21,6 +22,8 @@ export const appRouter = router({
 
   // Mirror Reflection Router (Primary Feature)
   mirror: mirrorRouter,
+
+
 
   // Knowledge Graph Router (Secondary Feature)
   kg: router({
@@ -325,6 +328,9 @@ export const appRouter = router({
 
         return await getPortalSummary(ctx.user.id);
       }),
+
+    // Portal Chat procedures
+    chat: portalChatRouter,
   }),
 });
 
