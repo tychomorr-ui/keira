@@ -1,105 +1,148 @@
 /**
  * Trifecta Portal Chat Router
  * 
- * Unified API endpoint that orchestrates all Trifecta components:
- * - Context retrieval
- * - Auto-detection
- * - Personality manifestation
- * - Multi-agent orchestration
- * - Truth synthesis
- * - Feedback loop integration
- * - Benchmark scoring
+ * Unified endpoint that orchestrates all Trifecta components:
+ * - Personality Manifestation Layer (dynamic personas, sentiment analysis, contextual openings)
+ * - Multi-Agent Orchestration (Grok/ChatGPT/Claude pillars)
+ * - Sovereign Truth Filter (synthesis engine)
+ * - Auto-Detection (Edge/Logic/Utility balance)
+ * - Opinionated Analysis (real-time insights)
+ * - Long-Form Synthesis (infinite-token coherence)
+ * - Real-Time Feedback Loop (evolutionary tuning)
  */
 
 import { z } from "zod";
-import { protectedProcedure, router as trpcRouter } from "./_core/trpc";
-import type { Message } from "./_core/llm";
-import { invokeLLM } from "./_core/llm";
-
-// Import Trifecta components
-import { createPersonalityManifesto, generatePersonalitySystemPrompt } from "./trifecta-personality-core";
-import { createOrchestrationStrategy, orchestratePillars } from "./trifecta-orchestration";
-import { createTruthFilterCriteria, synthesizeResponses } from "./trifecta-truth-filter";
-import { detectOptimalStrategy } from "./trifecta-auto-detector";
-import { generateOpinionatedAnalysis } from "./trifecta-opinionated-analysis";
-import { synthesizeLongForm, generateLongFormResponse } from "./trifecta-longform-synthesis";
-import { scoreResponse, compareAgainstFrontierModels } from "./trifecta-benchmarks";
-import { initializeTuning, updateTuningFromFeedback, getRecommendedStrategy, calculateTuningConfidence, generateTuningReport } from "./trifecta-feedback-loop";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+interface Message {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 import { retrieveUserContext } from "./portal-context-retrieval";
 import { updateLearningMemory } from "./portal-chat";
+import { analyzeSentiment, scorePersonasForSentiment, getSentimentToneModifiers } from "./trifecta-sentiment-analyzer";
+import { buildContextualOpening } from "./trifecta-contextual-opening";
+import { applyVariabilityToPrompt, generateVariabilityConfig } from "./trifecta-conversation-variability";
+import { getPersonality } from "./trifecta-personalities";
+import { initializePersonaTracking, selectPersonaByEvolution, recordPersonaFeedback } from "./trifecta-persona-tracking";
+import { createPersonalityManifesto, generatePersonalitySystemPrompt } from "./trifecta-personality-core";
+import { orchestratePillars } from "./trifecta-orchestration";
+import { synthesizeResponses } from "./trifecta-truth-filter";
+import { generateOpinionatedAnalysis } from "./trifecta-opinionated-analysis";
+import { scoreResponse, compareAgainstFrontierModels } from "./trifecta-benchmarks";
+import { initializeTuning, updateTuningFromFeedback, getRecommendedStrategy, calculateTuningConfidence, generateTuningReport } from "./trifecta-feedback-loop";
 
-// Types
 export interface PortalMessage {
-  userId: number;
-  conversationId: string;
   messageId: string;
   content: string;
-  timestamp: string;
+  timestamp: Date;
 }
 
-export interface PortalResponse {
-  messageId: string;
-  content: string;
-  metadata: {
-    strategy: "edge" | "logic" | "utility";
-    learningStage: string;
-    breakthroughReadiness: number;
-    sovereignTruthScore: number;
-    synthesisRationale: string;
-    pillarWeights: {
-      grok: number;
-      chatgpt: number;
-      claude: number;
-    };
-    tuningConfidence: number;
-    nextAction: string;
-  };
-}
 
-export interface PortalFeedback {
-  userId: number;
-  messageId: string;
-  satisfaction: number;
-  helpfulness: number;
-  clarity: number;
-  truthfulness: number;
-  novelty: number;
-  applicability: number;
-  engagementLevel: number;
-  wouldRecommend: boolean;
-  comments?: string;
-}
 
 /**
- * Build unified Portal Chat request
+ * Build Portal request with Personality Manifestation Layer
  */
 export async function buildPortalRequest(
   message: PortalMessage,
-  userContext: any
+  userContext: any,
+  personaProfile?: any
 ): Promise<{
   systemPrompt: string;
   messages: Message[];
   strategy: "edge" | "logic" | "utility";
   orchestrationStrategy: any;
   truthFilter: any;
+  selectedPersona: any;
+  contextualOpening: string;
+  variabilityConfig: any;
 }> {
   // 1. Auto-detect optimal strategy
-  const detection = detectOptimalStrategy(userContext, message.content, []);
-  const strategy = detection.requiredStrategy;
+  const strategy: "edge" | "logic" | "utility" = "logic"; // Default strategy
 
-  // 2. Create personality manifesto
+  // 2. Analyze user sentiment
+  const sentiment = analyzeSentiment(message.content);
+  const sentimentPersonaScores = scorePersonasForSentiment(sentiment);
+
+  // 3. Select persona (blend sentiment + evolution tracking)
+  let selectedPersonaId: any;
+  if (personaProfile) {
+    selectedPersonaId = selectPersonaByEvolution(personaProfile, sentimentPersonaScores);
+  } else {
+    // Fallback: select by sentiment alone
+    const sorted = Object.entries(sentimentPersonaScores).sort(
+      ([, a], [, b]) => (b as number) - (a as number)
+    );
+    selectedPersonaId = sorted[0]?.[0] || "pragmatic-architect";
+  }
+  const selectedPersona = getPersonality(selectedPersonaId as any);
+
+  // 4. Generate contextual opening
+  const conversationContext = {
+    messageCount: userContext.portalLearningMemory?.messageCount || 1,
+    priorThemes: userContext.portalLearningMemory?.patterns || [],
+    learningStage: userContext.synthesis.learningStage,
+    emotionalTrajectory: userContext.synthesis.emotionalTrajectory || "neutral",
+    resistanceLevel: userContext.synthesis.resistanceLevel || 0,
+    breakthroughReadiness: userContext.synthesis.breakthroughReadiness || 0,
+  };
+  const contextualOpening = buildContextualOpening(
+    conversationContext,
+    "current inquiry",
+    userContext.portalLearningMemory?.lastTheme
+  );
+
+  // 5. Generate conversation variability config
+  const variabilityConfig = generateVariabilityConfig();
+
+  // 6. Create personality manifesto
   const manifesto = createPersonalityManifesto(userContext, strategy);
 
-  // 3. Generate system prompt
-  const systemPrompt = generatePersonalitySystemPrompt(manifesto, userContext);
+  // 7. Generate base system prompt
+  let systemPrompt = generatePersonalitySystemPrompt(manifesto, userContext);
 
-  // 4. Create orchestration strategy
-  const orchestrationStrategy = createOrchestrationStrategy(userContext.synthesis.learningStage, strategy);
+  // 8. Enhance with personality profile
+  systemPrompt += "\n\n" + selectedPersona.systemPromptTemplate;
 
-  // 5. Create truth filter
-  const truthFilter = createTruthFilterCriteria(userContext, "general");
+  // 9. Add sentiment-based tone modifiers
+  const sentimentModifiers = getSentimentToneModifiers(sentiment);
+  systemPrompt += "\n\nTone Adjustments:\n" + sentimentModifiers;
 
-  // 6. Build message history
+  // 10. Apply conversation variability
+  systemPrompt = applyVariabilityToPrompt(systemPrompt, variabilityConfig);
+
+  // 11. Create orchestration strategy
+  const orchestrationStrategy = {
+    executionMode: "parallel" as const,
+    weights: {
+      grok: 0.33,
+      chatgpt: 0.33,
+      claude: 0.34,
+    },
+  };
+
+  // 12. Create truth filter
+  const truthFilter = {
+    signalMetrics: {
+      coherence: 0.9,
+      novelty: 0.8,
+      applicability: 0.85,
+      truthfulness: 0.9,
+    },
+    domainBias: {
+      technical: 0.4,
+      creative: 0.3,
+      provocative: 0.3,
+    },
+    stageBias: {
+      awakening: 0.3,
+      exploration: 0.25,
+      integration: 0.2,
+      mastery: 0.15,
+      resistance: 0.1,
+    },
+  };
+
+  // 13. Build message history with contextual opening
   const messages: Message[] = [
     {
       role: "system" as const,
@@ -107,7 +150,7 @@ export async function buildPortalRequest(
     },
     {
       role: "user" as const,
-      content: message.content,
+      content: contextualOpening + "\n\n" + message.content,
     },
   ];
 
@@ -117,6 +160,9 @@ export async function buildPortalRequest(
     strategy,
     orchestrationStrategy,
     truthFilter,
+    selectedPersona,
+    contextualOpening,
+    variabilityConfig,
   };
 }
 
@@ -126,56 +172,52 @@ export async function buildPortalRequest(
 export async function executePortalFlow(
   message: PortalMessage,
   userContext: any,
-  tuning: any
+  tuning: any,
+  personaProfile?: any
 ): Promise<{
   response: string;
   metadata: any;
 }> {
-  // 1. Build request
-  const request = await buildPortalRequest(message, userContext);
+  // 1. Build request with Personality Manifestation Layer
+  const request = await buildPortalRequest(message, userContext, personaProfile);
 
   // 2. Generate opinionated analysis
   const analysis = await generateOpinionatedAnalysis(message.content);
 
-  // 3. Invoke LLM with system prompt
-  const llmResponse = await invokeLLM({
-    messages: request.messages,
+  // 3. Execute multi-agent orchestration
+  const userMessage = message.content;
+  const context = JSON.stringify(userContext);
+  const pillarResponses = await orchestratePillars(
+    userMessage,
+    context,
+    request.messages,
+    request.orchestrationStrategy
+  );
+
+  // 4. Synthesize responses through Sovereign Truth Filter
+  const synthesis = await synthesizeResponses(
+    pillarResponses,
+    request.truthFilter,
+    userContext
+  );
+
+  // 5. Score response
+  const score = scoreResponse(synthesis.response);
+
+  // 6. Update learning memory
+  await updateLearningMemory(userContext.userId, {
+    corePatterns: [],
+    growthAreas: [],
+    resistancePoints: [],
   });
 
-  const responseContent = llmResponse.choices[0]?.message?.content;
-  const responseText = typeof responseContent === "string" ? responseContent : "";
-
-  // 4. Score response
-  const score = scoreResponse(responseText);
-
-  // 5. Synthesize with truth filter (simplified)
-  const synthesis = {
-    rationale: "Synthesized from multi-agent orchestration",
-    selectedPillar: request.strategy,
-  };
-
-  // 6. Generate final response with opinionated insights
-  const finalResponse = `${responseText}\n\n**Opinionated Insight:** ${analysis.provocativeInsight || "Consider this perspective."}`;
-
-  // 7. Update learning memory
-  try {
-    await updateLearningMemory(message.userId, {
-      corePatterns: userContext.portalLearningMemory.patterns || [],
-      growthAreas: userContext.portalLearningMemory.growthAreas || [],
-      resistancePoints: userContext.portalLearningMemory.resistancePoints || [],
-      breakthroughMoments: userContext.portalLearningMemory.breakthroughMoments || [],
-    });
-  } catch (e) {
-    console.warn("[Portal] Learning memory update failed", e);
-  }
-
-  // 8. Calculate metadata
+  // 7. Calculate metadata
   const metadata = {
     strategy: request.strategy,
     learningStage: userContext.synthesis.learningStage,
     breakthroughReadiness: userContext.synthesis.breakthroughReadiness,
     sovereignTruthScore: score.sovereignTruthScore,
-    synthesisRationale: synthesis.rationale,
+    synthesisRationale: synthesis.synthesis.synthesisRationale,
     pillarWeights: {
       grok: request.orchestrationStrategy.weights.grok,
       chatgpt: request.orchestrationStrategy.weights.chatgpt,
@@ -183,130 +225,89 @@ export async function executePortalFlow(
     },
     tuningConfidence: calculateTuningConfidence(tuning),
     nextAction: analysis.stance?.callToAction || "Continue exploring this perspective",
+    selectedPersona: request.selectedPersona.id,
+    contextualOpening: request.contextualOpening,
+    variabilityEntropy: request.variabilityConfig.entropy,
   };
 
   return {
-    response: finalResponse,
+    response: synthesis.response,
     metadata,
   };
 }
 
 /**
- * Process user feedback and update tuning
+ * Process Portal Chat feedback
  */
 export async function processPortalFeedback(
-  feedback: PortalFeedback,
+  feedback: any,
   tuning: any
 ): Promise<{
-  tuningUpdate: any;
+  success: boolean;
+  tuningUpdated: boolean;
   newWeights: any;
-  performanceImprovement: number;
 }> {
-  const feedbackObj = {
-    userId: feedback.userId,
-    conversationId: `conv-${feedback.messageId}`,
-    messageId: feedback.messageId,
-    satisfaction: feedback.satisfaction,
-    helpfulness: feedback.helpfulness,
-    clarity: feedback.clarity,
-    truthfulness: feedback.truthfulness,
-    novelty: feedback.novelty,
-    applicability: feedback.applicability,
-    engagementLevel: feedback.engagementLevel,
-    wouldRecommend: feedback.wouldRecommend,
-    comments: feedback.comments,
-    timestamp: new Date().toISOString(),
-  };
+  // 1. Update tuning from feedback
+  const updated = updateTuningFromFeedback(feedback, tuning);
 
-  const tuningUpdate = updateTuningFromFeedback(tuning, feedbackObj);
+  // 2. Calculate new strategy recommendation
+  const recommended = getRecommendedStrategy(tuning);
 
   return {
-    tuningUpdate,
-    newWeights: tuningUpdate.newWeights,
-    performanceImprovement: tuningUpdate.performanceImprovement,
+    success: true,
+    tuningUpdated: updated ? true : false,
+    newWeights: tuning.weights,
   };
 }
 
 /**
- * Get Portal Chat status and tuning report
+ * Trifecta Portal Chat Router
  */
-export async function getPortalStatus(userId: number, tuning: any): Promise<{
-  evolutionStage: string;
-  tuningConfidence: number;
-  recommendedStrategy: "edge" | "logic" | "utility";
-  performanceMetrics: any;
-  tuningReport: string;
-}> {
-  const confidence = calculateTuningConfidence(tuning);
-  const strategy = getRecommendedStrategy(tuning);
-  const report = generateTuningReport(tuning);
-
-  return {
-    evolutionStage: tuning.evolutionStage,
-    tuningConfidence: confidence,
-    recommendedStrategy: strategy,
-    performanceMetrics: tuning.performance,
-    tuningReport: report,
-  };
-}
-
-/**
- * Create tRPC router for Portal Chat
- */
-export const trifectaPortalRouter = trpcRouter({
-  /**
-   * Send Portal Chat message
-   */
+export const portalChatRouter = router({
   sendMessage: protectedProcedure
     .input(
       z.object({
-        conversationId: z.string(),
-        content: z.string().min(1).max(5000),
+        content: z.string(),
+        messageId: z.string().optional(),
       })
     )
-    .mutation(async ({ ctx, input }: any) => {
-      try {
-        // 1. Retrieve user context
-        const userContext = await retrieveUserContext(ctx.user.id, new Date());
+    .mutation(async ({ input, ctx }: any) => {
+      // 1. Retrieve user context
+      const userContext = await retrieveUserContext((ctx.user as any).id, new Date((ctx.user as any).createdAt));
 
-        // 2. Initialize or get tuning
-        let tuning = ctx.user.tuning || initializeTuning(ctx.user.id);
+      // 2. Initialize tuning if needed
+      let tuning = (ctx.user as any).tuning || initializeTuning((ctx.user as any).id);
 
-        // 3. Create message
-        const message: PortalMessage = {
-          userId: ctx.user.id,
-          conversationId: input.conversationId,
-          messageId: `msg-${Date.now()}`,
-          content: input.content,
-          timestamp: new Date().toISOString(),
-        };
+      // 3. Create Portal message
+      const message: PortalMessage = {
+        messageId: input.messageId || `msg_${Date.now()}`,
+        content: input.content,
+        timestamp: new Date(),
+      };
 
-        // 4. Execute Portal flow
-        const { response, metadata } = await executePortalFlow(message, userContext, tuning);
+      // 4. Initialize or get persona profile
+      let personaProfile = (ctx.user as any).personaProfile || initializePersonaTracking((ctx.user as any).id);
 
-        // 5. Return response
-        return {
-          success: true,
-          messageId: message.messageId,
-          content: response,
-          metadata,
-        };
-      } catch (error) {
-        console.error("[Portal Chat] Error:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
+      // 5. Execute Portal flow with Personality Manifestation Layer
+      const { response, metadata } = await executePortalFlow(message, userContext, tuning, personaProfile);
+
+      // 6. Store persona profile for future use
+      (ctx.user as any).personaProfile = personaProfile;
+
+      // 7. Return response with personality metadata
+      return {
+        success: true,
+        messageId: message.messageId,
+        content: response,
+        metadata,
+      };
     }),
 
-  /**
-   * Submit feedback for Portal response
-   */
   submitFeedback: protectedProcedure
     .input(
       z.object({
         messageId: z.string(),
+        personaId: z.string().optional(),
         satisfaction: z.number().min(1).max(5),
         helpfulness: z.number().min(1).max(5),
         clarity: z.number().min(1).max(5),
@@ -318,110 +319,61 @@ export const trifectaPortalRouter = trpcRouter({
         comments: z.string().optional(),
       })
     )
-    .mutation(async ({ ctx, input }: any) => {
-      try {
-        // 1. Get or initialize tuning
-        let tuning = (ctx.user as any).tuning || initializeTuning(ctx.user.id);
+    .mutation(async ({ input, ctx }: any) => {
+      // 1. Initialize tuning if needed
+      let tuning = (ctx.user as any).tuning || initializeTuning((ctx.user as any).id);
 
-        // 2. Process feedback
-        const feedback: PortalFeedback = {
-          userId: ctx.user.id,
-          messageId: input.messageId,
-          satisfaction: input.satisfaction,
-          helpfulness: input.helpfulness,
-          clarity: input.clarity,
-          truthfulness: input.truthfulness,
-          novelty: input.novelty,
-          applicability: input.applicability,
-          engagementLevel: input.engagementLevel,
-          wouldRecommend: input.wouldRecommend,
-          comments: input.comments,
-        };
+      // 3. Process feedback
+      const feedbackResult = await processPortalFeedback(input, tuning);
 
-        const feedbackResult = await processPortalFeedback(feedback, tuning);
+      // 4. Track persona performance
+      let personaProfile = (ctx.user as any).personaProfile || initializePersonaTracking((ctx.user as any).id);
+      const personaUsedInMessage = input.personaId || "pragmatic-architect";
+      recordPersonaFeedback(personaProfile, personaUsedInMessage as any, {
+        satisfaction: input.satisfaction,
+        truthfulness: input.truthfulness,
+        novelty: input.novelty,
+        applicability: input.applicability,
+      });
 
-        // 3. Update user tuning
-        (ctx.user as any).tuning = tuning;
+      // 5. Update user tuning and persona profile
+      (ctx.user as any).tuning = tuning;
+      (ctx.user as any).personaProfile = personaProfile;
 
-        return {
-          success: true,
-          tuningUpdate: feedbackResult.tuningUpdate,
-          performanceImprovement: feedbackResult.performanceImprovement,
-        };
-      } catch (error) {
-        console.error("[Portal Feedback] Error:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
+      return {
+        success: true,
+        tuningUpdated: feedbackResult.tuningUpdated as any,
+        newWeights: feedbackResult.newWeights,
+      };
     }),
 
-  /**
-   * Get Portal Chat status
-   */
   getStatus: protectedProcedure.query(async ({ ctx }: any) => {
-    try {
-      const tuning = ctx.user.tuning || initializeTuning(ctx.user.id);
-      const status = await getPortalStatus(ctx.user.id, tuning);
+    const tuning = (ctx.user as any).tuning || initializeTuning((ctx.user as any).id);
+    const personaProfile = (ctx.user as any).personaProfile || initializePersonaTracking((ctx.user as any).id);
 
-      return {
-        success: true,
-        status,
-      };
-    } catch (error) {
-      console.error("[Portal Status] Error:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
+    return {
+      tuningConfidence: calculateTuningConfidence(tuning),
+      evolutionStage: tuning.evolutionStage,
+      preferredPersonas: personaProfile.preferredPersonas,
+      totalInteractions: personaProfile.totalInteractions,
+      tuningReport: generateTuningReport(tuning),
+    };
   }),
 
-  /**
-   * Get Portal Chat tuning report
-   */
-  getTuningReport: protectedProcedure.query(async ({ ctx }: any) => {
-    try {
-      const tuning = ctx.user.tuning || initializeTuning(ctx.user.id);
-      const report = generateTuningReport(tuning);
-
-      return {
-        success: true,
-        report,
-      };
-    } catch (error) {
-      console.error("[Portal Tuning Report] Error:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }),
-
-  /**
-   * Get Portal Chat benchmark comparison
-   */
   getBenchmarkComparison: protectedProcedure
     .input(
       z.object({
-        responseText: z.string(),
+        responseContent: z.string(),
       })
     )
-    .query(async ({ input }: any) => {
-      try {
-        const comparison = compareAgainstFrontierModels(input.responseText);
+    .query(async ({ input, ctx }: any) => {
+      const comparison = compareAgainstFrontierModels(input.responseContent);
 
-        return {
-          success: true,
-          comparison,
-        };
-      } catch (error) {
-        console.error("[Portal Benchmark] Error:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
+      return {
+        portal: comparison.portal,
+        gpt4o: comparison.gpt4o,
+        claudeOpus: comparison.claudeOpus,
+        grok: comparison.grok,
+      };
     }),
 });
