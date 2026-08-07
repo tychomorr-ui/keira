@@ -25,6 +25,8 @@ import { applyVariabilityToPrompt, generateVariabilityConfig } from "./trifecta-
 import { getPersonality } from "./trifecta-personalities";
 import { initializePersonaTracking, selectPersonaByEvolution, recordPersonaFeedback } from "./trifecta-persona-tracking";
 import { createPersonalityManifesto, generatePersonalitySystemPrompt } from "./trifecta-personality-core";
+import { performArchangelHandshake, createMissionState, updateMissionState, extractMissionIntent } from "./cmap-handshake";
+import { initializecMAPSession, processcMAPMessage, extractLivingContext, buildcMAPContext } from "./cmap-portal-integration";
 import { orchestratePillars } from "./trifecta-orchestration";
 import { synthesizeResponses } from "./trifecta-truth-filter";
 import { generateOpinionatedAnalysis } from "./trifecta-opinionated-analysis";
@@ -285,21 +287,45 @@ export const portalChatRouter = router({
         timestamp: new Date(),
       };
 
-      // 4. Initialize or get persona profile
+      // 4. Initialize cMAP session
+      let missionState = (ctx.user as any).missionState || await initializecMAPSession((ctx.user as any).id);
+
+      // 5. Process message with cMAP
+      const cmapMessage = processcMAPMessage(message.content, missionState);
+      missionState = cmapMessage.missionState;
+
+      // 6. Build cMAP context for system prompt
+      const cmapContext = buildcMAPContext(missionState);
+      (userContext as any).cmapContext = cmapContext;
+
+      // 7. Initialize or get persona profile
       let personaProfile = (ctx.user as any).personaProfile || initializePersonaTracking((ctx.user as any).id);
 
-      // 5. Execute Portal flow with Personality Manifestation Layer
+      // 8. Execute Portal flow with Personality Manifestation Layer
       const { response, metadata } = await executePortalFlow(message, userContext, tuning, personaProfile);
 
-      // 6. Store persona profile for future use
+      // 9. Extract living context from response
+      const livingContextUpdates = extractLivingContext(response, missionState);
+      missionState = updateMissionState(missionState, livingContextUpdates);
+
+      // 10. Store mission state and persona profile for future use
+      (ctx.user as any).missionState = missionState;
       (ctx.user as any).personaProfile = personaProfile;
 
-      // 7. Return response with personality metadata
+      // 11. Return response with cMAP and personality metadata
       return {
         success: true,
         messageId: message.messageId,
         content: response,
-        metadata,
+        metadata: {
+          ...metadata,
+          missionIntent: missionState.missionIntent,
+          missionStatus: missionState.missionStatus,
+          decisions: missionState.decisions,
+          evidence: missionState.evidence,
+          openQuestions: missionState.openQuestions,
+          nextAction: missionState.nextAction,
+        },
       };
     }),
 
