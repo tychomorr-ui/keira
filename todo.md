@@ -17,4 +17,4 @@
 - [x] Stop using cMAP as active Portal-facing terminology or product explanation
 - [x] Preserve existing Portal contracts without reinterpreting the user’s protocol
 - [x] Run strict TypeScript and full Vitest checks
-- [ ] Save corrected visual-theme checkpoint
+- [x] Save corrected visual-theme checkpoint
