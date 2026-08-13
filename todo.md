@@ -9,3 +9,12 @@
 - [x] Preserve responsive, keyboard, and screen-reader behavior
 - [x] Run TypeScript and Vitest checks
 - [x] Save a reviewable checkpoint
+
+
+## Reference Theme Correction
+- [x] Replace brown/yellow Portal palette with near-black navy, gold-white, violet, and indigo accents
+- [x] Match the supplied cinematic reference more faithfully in layout tone and typography
+- [x] Stop using cMAP as active Portal-facing terminology or product explanation
+- [x] Preserve existing Portal contracts without reinterpreting the user’s protocol
+- [x] Run strict TypeScript and full Vitest checks
+- [ ] Save corrected visual-theme checkpoint
