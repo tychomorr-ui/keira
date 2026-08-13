@@ -2,7 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Menu, Plus, Send, ShieldCheck, Sparkles, X, LogIn } from "lucide-react";
+import {
+  Activity,
+  BrainCircuit,
+  ChevronRight,
+  Compass,
+  Eye,
+  Layers3,
+  Loader2,
+  LogIn,
+  Menu,
+  MessageCircle,
+  Plus,
+  Send,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
@@ -58,6 +75,16 @@ const STRATEGY_LABELS: Record<DialogueStrategy, string> = {
   catalytic: "Catalytic",
 };
 
+const CINEMATIC_NAV = [
+  { label: "Conversation", icon: MessageCircle, detail: "Active thread" },
+  { label: "Memory", icon: BrainCircuit, detail: "Held in context" },
+  { label: "Revelation", icon: Sparkles, detail: "Emergent insight" },
+  { label: "Insights", icon: Eye, detail: "Observed patterns" },
+  { label: "Journey", icon: Compass, detail: "Learning stage" },
+  { label: "Systems", icon: Layers3, detail: "Portal state" },
+  { label: "Settings", icon: Settings2, detail: "Operator controls" },
+] as const;
+
 function formatDate(value: Conversation["createdAt"]) {
   return new Date(value).toLocaleDateString(undefined, {
     month: "short",
@@ -74,6 +101,7 @@ export default function PortalChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showThreads, setShowThreads] = useState(false);
+  const [showContextPanel, setShowContextPanel] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [lastMessageMetadata, setLastMessageMetadata] = useState<MessageMetadata | null>(null);
   const [learningProfile, setLearningProfile] = useState<{
@@ -195,27 +223,51 @@ export default function PortalChat() {
     ? cmap.missionIntent
     : "Awaiting mission objective";
   const nextAction = cmap?.nextAction || lastMessageMetadata?.nextAction || "Awaiting a clear next action";
+  const presenceState = cmap?.handshakeComplete ? "Present" : "Awaiting Handshake";
+  const currentState = strategy ? STRATEGY_LABELS[strategy] : presenceState;
 
   return (
-    <main className="min-h-screen bg-[#130f0b] text-[#f2e7d5] selection:bg-[#b67837] selection:text-[#1a1008]">
+    <main className="min-h-screen bg-[#08090c] text-[#f2e7d5] selection:bg-[#b67837] selection:text-[#1a1008]">
       <div className="flex min-h-screen flex-col lg:flex-row">
         <aside
           className={`${showThreads ? "fixed inset-0 z-40 flex" : "hidden"} w-full flex-col border-r border-[#49321f] bg-[#17100b] lg:static lg:flex lg:w-[19rem]`}
           aria-label="Portal threads"
         >
-          <div className="flex items-center justify-between border-b border-[#49321f] px-5 py-5">
-            <div>
-              <div className="text-[0.65rem] uppercase tracking-[0.32em] text-[#9d7950]">Sovereign interface</div>
-              <div className="mt-1 font-serif text-2xl tracking-tight text-[#f0d2a4]">Portal</div>
+          <div className="border-b border-[#49321f] px-5 py-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[0.65rem] uppercase tracking-[0.32em] text-[#e4b56d]">Portal</div>
+                <div className="mt-1 text-[0.58rem] uppercase tracking-[0.22em] text-[#806b55]">Converse with the signal</div>
+              </div>
+              <div className="grid h-9 w-9 place-items-center rounded-full border border-[#72502e] text-[#e4b56d]" aria-hidden="true">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowThreads(false)}
+                className="rounded-sm p-2 text-[#9d7950] hover:bg-[#2a1c12] hover:text-[#f0d2a4] lg:hidden"
+                aria-label="Close conversation list"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowThreads(false)}
-              className="rounded-sm p-2 text-[#9d7950] hover:bg-[#2a1c12] hover:text-[#f0d2a4] lg:hidden"
-              aria-label="Close conversation list"
-            >
-              <X className="h-5 w-5" />
-            </button>
+          </div>
+
+          <div className="border-b border-[#49321f] px-3 py-4" role="list" aria-label="Portal surfaces">
+            {CINEMATIC_NAV.map(({ label, icon: Icon, detail }, index) => (
+              <div
+                key={label}
+                role="listitem"
+                aria-current={index === 0 ? "page" : undefined}
+                className={`mb-1 flex items-center gap-3 border-l-2 px-3 py-2.5 ${index === 0 ? "border-[#d39a57] bg-[#2a1c12] text-[#f0d2a4]" : "border-transparent text-[#806b55]"}`}
+              >
+                <Icon className={`h-4 w-4 shrink-0 ${index === 0 ? "text-[#e4b56d]" : "text-[#72502e]"}`} />
+                <div className="min-w-0">
+                  <div className="text-[0.68rem] uppercase tracking-[0.16em]">{label}</div>
+                  <div className="mt-0.5 truncate text-[0.62rem] text-[#665544]">{detail}</div>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="border-b border-[#49321f] p-4">
@@ -271,6 +323,9 @@ export default function PortalChat() {
           </div>
 
           <div className="border-t border-[#49321f] px-5 py-4 text-xs text-[#806b55]">
+            <div className="mb-4 flex items-center gap-2 text-[0.62rem] uppercase tracking-[0.2em] text-[#806b55]">
+              <Activity className="h-3.5 w-3.5 text-[#d39a57]" /> Operator
+            </div>
             <div className="truncate text-[#c8ab82]">{user?.name || "Operator"}</div>
             <div className="mt-1 truncate">{user?.email || "Authenticated"}</div>
           </div>
@@ -305,7 +360,20 @@ export default function PortalChat() {
             </div>
           </header>
 
-          <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 lg:px-8">
+          <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 lg:px-8">
+            <div className="relative overflow-hidden border-b border-[#49321f] py-9 sm:py-12">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(214,153,73,0.16),transparent_42%)]" />
+              <div className="relative flex items-center justify-between gap-4 text-[0.62rem] uppercase tracking-[0.28em] text-[#9d7950]">
+                <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#d39a57]" /> Cinematic moment</span>
+                <span className="hidden sm:block">{cmap?.handshakeComplete ? "Returning to conversation" : "Awaiting presence"}</span>
+              </div>
+              <div className="relative mt-7 max-w-3xl">
+                <div className="font-serif text-4xl leading-none tracking-[0.08em] text-[#f0d2a4] sm:text-6xl">Purpose</div>
+                <div className="mt-3 text-[0.7rem] uppercase tracking-[0.32em] text-[#9d7950]">is something you build</div>
+                <p className="mt-6 max-w-xl text-sm leading-7 text-[#b9a38a]">Portal keeps the conversation in motion while cMAP holds the objective, evidence, and next clear move.</p>
+              </div>
+            </div>
+
             <div className="grid gap-3 border-b border-[#49321f] py-4 text-xs sm:grid-cols-3">
               <div>
                 <div className="uppercase tracking-[0.2em] text-[#806b55]">Current objective</div>
@@ -317,11 +385,34 @@ export default function PortalChat() {
               </div>
               <div className="sm:text-right">
                 <div className="uppercase tracking-[0.2em] text-[#806b55]">Living context</div>
-                <div className="mt-1 text-[#b9a38a]">
+                <button
+                  type="button"
+                  onClick={() => setShowContextPanel((current) => !current)}
+                  className="mt-1 inline-flex items-center gap-1 text-[#b9a38a] transition hover:text-[#f0d2a4]"
+                  aria-expanded={showContextPanel}
+                >
                   {cmap ? `${cmap.decisions.length} decisions · ${cmap.evidence.length} evidence · ${cmap.openQuestions.length} questions` : "Awaiting Handshake"}
-                </div>
+                  <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showContextPanel ? "rotate-90" : ""}`} />
+                </button>
               </div>
             </div>
+
+            {showContextPanel && (
+              <div className="grid gap-4 border-b border-[#302116] py-4 text-xs sm:grid-cols-3" aria-label="Living context details">
+                <div>
+                  <div className="uppercase tracking-[0.18em] text-[#806b55]">Decisions</div>
+                  <p className="mt-2 leading-6 text-[#b9a38a]">{cmap?.decisions[0] || "Awaiting Handshake"}</p>
+                </div>
+                <div>
+                  <div className="uppercase tracking-[0.18em] text-[#806b55]">Evidence</div>
+                  <p className="mt-2 leading-6 text-[#b9a38a]">{cmap?.evidence[0] || "Awaiting Handshake"}</p>
+                </div>
+                <div>
+                  <div className="uppercase tracking-[0.18em] text-[#806b55]">Open question</div>
+                  <p className="mt-2 leading-6 text-[#b9a38a]">{cmap?.openQuestions[0] || "Awaiting Handshake"}</p>
+                </div>
+              </div>
+            )}
 
             {(stage || strategy) && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#302116] py-3 text-[0.68rem] uppercase tracking-[0.18em] text-[#9d7950]">
@@ -404,6 +495,31 @@ export default function PortalChat() {
             </div>
           </div>
         </section>
+
+        <aside className="hidden w-[18rem] shrink-0 flex-col border-l border-[#49321f] bg-[#0b0d10] xl:flex" aria-label="Portal presence and context">
+          <div className="border-b border-[#49321f] px-5 py-5">
+            <div className="flex items-center justify-between text-[0.62rem] uppercase tracking-[0.22em] text-[#806b55]">
+              <span>Presence</span>
+              <span className="flex items-center gap-2 text-[#d39a57]"><span className="h-1.5 w-1.5 rounded-full bg-[#d39a57]" /> {presenceState}</span>
+            </div>
+            <div className="mx-auto mt-7 grid h-24 w-24 place-items-center rounded-full border border-[#72502e] bg-[radial-gradient(circle,rgba(214,153,73,0.18),transparent_65%)] text-[#e4b56d] shadow-[0_0_50px_rgba(214,153,73,0.12)]">
+              <div className="grid h-12 w-12 place-items-center rounded-full border border-[#d39a57]/70"><Sparkles className="h-5 w-5" /></div>
+            </div>
+            <div className="mt-5 text-center text-[0.62rem] uppercase tracking-[0.2em] text-[#806b55]">Current state</div>
+            <div className="mt-2 text-center font-serif text-lg text-[#f0d2a4]">{currentState}</div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+            <div className="mb-3 text-[0.62rem] uppercase tracking-[0.22em] text-[#806b55]">Conversation flow</div>
+            <div className="space-y-2">
+              <div className="border border-[#302116] bg-[#101217] px-3 py-3"><div className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9d7950]">Objective</div><div className="mt-1 line-clamp-2 text-sm leading-6 text-[#c8ab82]">{missionIntent}</div></div>
+              <div className="border border-[#302116] bg-[#101217] px-3 py-3"><div className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9d7950]">Pattern state</div><div className="mt-1 text-sm leading-6 text-[#c8ab82]">{stage ? STAGE_LABELS[stage] : "Awaiting Handshake"}</div></div>
+              <div className="border border-[#302116] bg-[#101217] px-3 py-3"><div className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9d7950]">Next move</div><div className="mt-1 line-clamp-3 text-sm leading-6 text-[#c8ab82]">{nextAction}</div></div>
+            </div>
+          </div>
+
+          <div className="border-t border-[#49321f] px-4 py-4 text-[0.62rem] uppercase tracking-[0.16em] text-[#665544]">Truthful state only</div>
+        </aside>
       </div>
     </main>
   );

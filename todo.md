@@ -19,3 +19,14 @@
 - [x] TypeScript strict compilation passing with zero errors
 - [x] Full Vitest suite passing (93 tests total)
 - [x] Save reviewable checkpoint (version 7fa2961a)
+
+
+## Cinematic Portal Reference Refinement
+- [ ] Translate supplied cinematic reference into Portal-only UI changes
+- [ ] Keep the product name Portal and preserve cMAP/Trifecta contracts
+- [ ] Add restrained cinematic header and conversation-stage presence
+- [ ] Add non-misleading Portal navigation rail and operator profile context
+- [ ] Add truthful presence/context rail using only available state
+- [ ] Preserve responsive, keyboard, and screen-reader behavior
+- [ ] Run TypeScript and Vitest checks
+- [ ] Save a reviewable checkpoint
