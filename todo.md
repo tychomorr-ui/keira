@@ -1,32 +1,11 @@
-# Portal Flagship Refinement TODO
-
-## Phase 1: Portal Focus & Scoping
-- [x] Confirm product name remains Portal (reject Omni-Chat rename)
-- [x] Document separate sovereign products (Mirror, Terminus, Monarch, Recovery, Clarity Suite) in PORTAL_SCOPE.md
-- [x] Make Portal the sole active destination route in the application
-
-## Phase 2: cMAP Feature Integration
-- [x] Add cMAP handshake and mission-state helpers
-- [x] Integrate cMAP context and sentence-safe question extraction into the unified Portal router
-- [x] Maintain honest in-memory session state without fabricated telemetry
-
-## Phase 3: Visual & Conversational Refinement
-- [x] Refine Portal visual language toward a quiet amber/bronze optical-control aesthetic
-- [x] Surface mission objective, next action, and living context honestly in the conversation shell
-- [x] Keep conversation primary and responsive
-
-## Phase 4: Verification & Checkpoint
-- [x] TypeScript strict compilation passing with zero errors
-- [x] Full Vitest suite passing (93 tests total)
-- [x] Save reviewable checkpoint (version 7fa2961a)
-
+# Portal Cinematic Refinement TODO
 
 ## Cinematic Portal Reference Refinement
-- [ ] Translate supplied cinematic reference into Portal-only UI changes
-- [ ] Keep the product name Portal and preserve cMAP/Trifecta contracts
-- [ ] Add restrained cinematic header and conversation-stage presence
-- [ ] Add non-misleading Portal navigation rail and operator profile context
-- [ ] Add truthful presence/context rail using only available state
-- [ ] Preserve responsive, keyboard, and screen-reader behavior
-- [ ] Run TypeScript and Vitest checks
-- [ ] Save a reviewable checkpoint
+- [x] Translate supplied cinematic reference into Portal-only UI changes
+- [x] Keep the product name Portal and preserve cMAP/Trifecta contracts
+- [x] Add restrained cinematic header and conversation-stage presence
+- [x] Add non-misleading Portal navigation rail and operator profile context
+- [x] Add truthful presence/context rail using only available state
+- [x] Preserve responsive, keyboard, and screen-reader behavior
+- [x] Run TypeScript and Vitest checks
+- [x] Save a reviewable checkpoint
