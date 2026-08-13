@@ -10,6 +10,7 @@ import {
   Eye,
   Layers3,
   Loader2,
+  KeyRound,
   LogIn,
   Menu,
   MessageCircle,
@@ -22,7 +23,6 @@ import {
 } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 
 type LearningStage = "awakening" | "exploration" | "integration" | "mastery" | "resistance";
 type DialogueStrategy = "socratic" | "prophetic" | "forensic" | "catalytic";
@@ -94,6 +94,15 @@ function formatDate(value: Conversation["createdAt"]) {
 
 export default function PortalChat() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const utils = trpc.useUtils();
+  const loginMutation = trpc.auth.login.useMutation();
+  const registerMutation = trpc.auth.register.useMutation();
+  const claimAccountMutation = trpc.auth.claimAccount.useMutation();
+  const [authMode, setAuthMode] = useState<"login" | "register" | "claim">("login");
+  const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [messages, setMessages] = useState<PortalMessage[]>([]);
@@ -147,6 +156,25 @@ export default function PortalChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  const handleAuthSubmit = async () => {
+    setAuthError(null);
+    try {
+      if (authMode === "login") {
+        await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
+      } else if (authMode === "register") {
+        await registerMutation.mutateAsync({ name: authName, email: authEmail, password: authPassword });
+      } else {
+        await claimAccountMutation.mutateAsync({ name: authName, email: authEmail, password: authPassword });
+      }
+      await utils.auth.me.invalidate();
+      setAuthPassword("");
+    } catch (error: unknown) {
+      setAuthError(error instanceof Error ? error.message : "Authentication failed. Try again.");
+    }
+  };
+
+  const authSubmitting = loginMutation.isPending || registerMutation.isPending || claimAccountMutation.isPending;
 
   const handleCreateConversation = async () => {
     const title = newTitle.trim() || "Untitled conversation";
@@ -205,12 +233,73 @@ export default function PortalChat() {
           <p className="mt-4 max-w-md text-sm leading-7 text-[#a6aec0]">
             A direct, uncensored conversation with the unknown—esoteric knowledge, unvarnished truth, and the questions polite systems refuse to touch.
           </p>
-          <Button
-            onClick={() => (window.location.href = getLoginUrl())}
-            className="mt-8 rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff]"
+          <div className="mt-8 grid grid-cols-3 border border-[#1a2240] text-[0.62rem] uppercase tracking-[0.14em]">
+            {([
+              ["login", "Enter"],
+              ["register", "Create"],
+              ["claim", "Claim"],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  setAuthMode(mode);
+                  setAuthError(null);
+                }}
+                className={`px-2 py-3 transition ${authMode === mode ? "bg-[#11162a] text-[#d7c7ff]" : "text-[#737b8f] hover:bg-[#101a32]"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleAuthSubmit();
+            }}
           >
-            <LogIn className="mr-2 h-4 w-4" /> Enter dialogue
-          </Button>
+            {authMode !== "login" && (
+              <Input
+                aria-label="Your name"
+                autoComplete="name"
+                placeholder="Name"
+                value={authName}
+                onChange={(event) => setAuthName(event.target.value)}
+                className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+              />
+            )}
+            <Input
+              aria-label="Email address"
+              autoComplete="email"
+              type="email"
+              placeholder="Email"
+              value={authEmail}
+              onChange={(event) => setAuthEmail(event.target.value)}
+              className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+            />
+            <Input
+              aria-label="Password"
+              autoComplete={authMode === "login" ? "current-password" : "new-password"}
+              type="password"
+              placeholder={authMode === "login" ? "Password" : "Password (12+ characters)"}
+              value={authPassword}
+              onChange={(event) => setAuthPassword(event.target.value)}
+              className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+            />
+            {authError && <p className="text-sm leading-6 text-[#ff9aa8]" role="alert">{authError}</p>}
+            <Button
+              type="submit"
+              disabled={authSubmitting}
+              className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
+            >
+              {authSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+              {authMode === "login" ? "Enter dialogue" : authMode === "register" ? "Create sovereign account" : "Claim account"}
+            </Button>
+          </form>
+          <p className="mt-4 text-[0.68rem] leading-6 text-[#737b8f]">
+            {authMode === "claim" ? "Use the email already associated with your Portal history to establish your own credentials." : "Your conversation session stays inside this application."}
+          </p>
         </section>
       </main>
     );

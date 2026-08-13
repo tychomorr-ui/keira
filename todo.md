@@ -28,3 +28,13 @@
 - [x] Preserve Portal chat behavior, backend contracts, accessibility, and responsiveness
 - [x] Run TypeScript and full Vitest checks
 - [x] Save corrected alien-conversation checkpoint
+
+
+## Authentication Loop & Sovereign First-Party Authentication Replacement
+- [x] Trace and eliminate Enter dialogue → sign-in → return bounce loop by replacing external auth redirects with first-party sessions
+- [x] Remove Manus OAuth dependencies, callback routes, and external portal URL redirection
+- [x] Extend database schema with password hash support and sovereign email accounts
+- [x] Implement first-party register, login, account claim, logout, and session validation in tRPC and Express
+- [x] Build clean sovereign login, registration, and account claim forms inside PortalChat.tsx
+- [x] Run strict TypeScript compilation and pass all 96 Vitest tests
+- [x] Save sovereign authentication checkpoint

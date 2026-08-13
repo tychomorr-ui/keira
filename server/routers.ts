@@ -1,5 +1,5 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
+import { TRPCError } from "@trpc/server";
+import { clearSessionCookie, createSessionToken, hashPassword, setSessionCookie, verifyPassword } from "./sovereign-auth";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
@@ -11,12 +11,70 @@ export const appRouter = router({
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+
+    register: publicProcedure
+      .input(z.object({
+        name: z.string().trim().min(1).max(120),
+        email: z.string().trim().email().max(320),
+        password: z.string().min(12).max(200),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const email = input.email.trim().toLowerCase();
+        if (await db.getUserByEmail(email)) {
+          throw new TRPCError({ code: "CONFLICT", message: "An account already exists for that email." });
+        }
+
+        const passwordHash = await hashPassword(input.password);
+        const user = await db.createSovereignUser({ email, name: input.name, passwordHash });
+        if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Account creation failed." });
+
+        setSessionCookie(ctx.req, ctx.res, await createSessionToken({ userId: user.id, name: user.name || input.name }));
+        return user;
+      }),
+
+    login: publicProcedure
+      .input(z.object({
+        email: z.string().trim().email().max(320),
+        password: z.string().min(1).max(200),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const user = await db.getUserByEmail(input.email);
+        if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
+        }
+
+        await db.upsertUser({ id: user.id, lastSignedIn: new Date() });
+        setSessionCookie(ctx.req, ctx.res, await createSessionToken({ userId: user.id, name: user.name || "Operator" }));
+        return user;
+      }),
+
+    claimAccount: publicProcedure
+      .input(z.object({
+        email: z.string().trim().email().max(320),
+        name: z.string().trim().min(1).max(120),
+        password: z.string().min(12).max(200),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const email = input.email.trim().toLowerCase();
+        const user = await db.getUserByEmail(email);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "No existing account matches that email." });
+        if (user.passwordHash) throw new TRPCError({ code: "CONFLICT", message: "That account already has sovereign credentials." });
+
+        const updated = await db.setSovereignCredentials({
+          userId: user.id,
+          email,
+          name: input.name,
+          passwordHash: await hashPassword(input.password),
+        });
+        if (!updated) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Account claim failed." });
+
+        setSessionCookie(ctx.req, ctx.res, await createSessionToken({ userId: updated.id, name: updated.name || input.name }));
+        return updated;
+      }),
+
     logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      clearSessionCookie(ctx.req, ctx.res);
+      return { success: true } as const;
     }),
   }),
 

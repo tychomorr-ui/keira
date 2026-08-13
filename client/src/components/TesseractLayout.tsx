@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, Zap, Network, Brain, Sparkles, Crown } from "lucide-react";
-import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 
 interface TesseractLayoutProps {
@@ -27,10 +26,10 @@ export default function TesseractLayout({
           <h1 className="text-4xl font-bold text-white mb-4">Tesseract</h1>
           <p className="text-slate-300 mb-8">The Sovereign Truth Engine</p>
           <Button
-            onClick={() => (window.location.href = getLoginUrl())}
+            onClick={() => (window.location.href = "/")}
             className="bg-amber-600 hover:bg-amber-700 text-white"
           >
-            Sign In
+              Return to Portal
           </Button>
         </div>
       </div>
