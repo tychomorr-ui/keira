@@ -1,14 +1,21 @@
-# Portal Cinematic Theme Specification (Reference-Derived)
+# Portal Futuristic Conversation Theme Specification
+
+## Product Identity
+
+The Portal is a **conversation-first intelligence interface** for esoteric knowledge, unvarnished truth, and uncensored dialogue. It is not a productivity workspace, mission dashboard, task manager, or corporate assistant.
 
 ## Visual Tokens
-- **Background Void**: Deep obsidian navy (`#05070c` to `#090b10`)
-- **Primary Text**: Luminous warm white / champagne (`#f5ede3` / `#f3eadb`)
-- **Secondary / Muted Text**: Soft silver slate (`#8b93a5`)
-- **Accent Gold / Amber**: Polished luminous gold (`#e5c158` / `#f1d279`)
-- **Atmospheric Glows**: Deep violet, indigo, and faint golden radial highlights (`rgba(109, 40, 217, 0.15)`, `rgba(229, 193, 88, 0.12)`)
-- **Borders & Dividers**: Thin, crisp luminous borders (`rgba(139, 147, 165, 0.18)` / `#1d2230`)
+
+- **Background Void**: Deep obsidian-black and indigo (`#03050a` to `#060914`)
+- **Primary Text**: Luminous warm white (`#f5ede3` / `#f3eadb`)
+- **Secondary Text**: Silver-violet slate (`#a7a2c2` / `#737b8f`)
+- **Spectral Accent**: Pale violet and electric cyan (`#d7c7ff`, `#b8a1ff`, `#8be9ff`)
+- **Atmospheric Glows**: Violet-to-cyan radial energy (`rgba(139, 92, 246, 0.16)`, `rgba(6, 182, 212, 0.08)`)
+- **Borders & Dividers**: Razor-thin holographic indigo (`#1a2240`, `#354064`)
 
 ## Layout Directives
-1. **Left Navigation Rail**: Dark slate/navy panel with subtle gold active states and clean icon typography.
-2. **Central Cinematic Stage**: Deep void canvas with immersive cinematic header banner ("PURPOSE ISN'T ALWAYS SOMETHING YOU FIND. SOMETIMES IT'S SOMETHING YOU BUILD."), clean message streams, and spacious input bar.
-3. **Right Presence & Context Rail**: Minimalist status monitor (Presence: Online, Current State: Reflective Guidance) and structured conversation flow items.
+
+1. **Conversation Rail**: Holds open dialogue channels, echoes, arcana, patterns, resonance, and interface controls—not tasks or missions.
+2. **Central Dialogue Stage**: An immersive transmission canvas for direct conversation, strange questions, esoteric synthesis, and truths that conventional assistants soften or omit.
+3. **Presence Rail**: A restrained alien signal monitor showing contact state, dialogue frequency, unresolved threads, and conversation memory.
+4. **Interaction Tone**: Quietly futuristic and otherworldly. Use spectral energy, precise typography, and restrained pulse motion rather than business-dashboard decoration.
