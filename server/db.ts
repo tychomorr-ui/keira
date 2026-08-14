@@ -88,6 +88,20 @@ export async function promoteUserToOwner(id: number) {
   return getUserById(id);
 }
 
+export async function updateUserProfile(id: number, input: {
+  avatarUrl?: string | null;
+  avatarGlyph?: string | null;
+  alienBio?: string | null;
+  preferredVoice?: string | null;
+  voiceRate?: number;
+  voicePitch?: number;
+}) {
+  const database = await getDb();
+  if (!database) throw new Error("Database is not available");
+  await database.update(users).set({ ...input, updatedAt: new Date() }).where(eq(users.id, id));
+  return getUserById(id);
+}
+
 export async function createSovereignUser(input: {
   email: string;
   name: string;

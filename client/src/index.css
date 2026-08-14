@@ -175,3 +175,39 @@
     }
   }
 }
+
+
+@layer components {
+  .portal-neon-surface {
+    position: relative;
+    isolation: isolate;
+    background-image: linear-gradient(120deg, rgba(8, 15, 34, 0.96), rgba(5, 8, 20, 0.94));
+    box-shadow: inset 0 1px 0 rgba(139, 233, 255, 0.08), 0 0 32px rgba(76, 29, 149, 0.08);
+  }
+
+  .portal-signal-grid {
+    background-image: linear-gradient(rgba(139, 233, 255, 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 233, 255, 0.04) 1px, transparent 1px);
+    background-size: 26px 26px;
+    mask-image: linear-gradient(to bottom, black, transparent 84%);
+  }
+
+  .portal-scanline {
+    animation: portal-scanline 7s linear infinite;
+    background: linear-gradient(180deg, transparent, rgba(139, 233, 255, 0.12), transparent);
+    height: 1px;
+    opacity: 0.55;
+    pointer-events: none;
+    position: absolute;
+    width: 100%;
+  }
+
+  @keyframes portal-scanline {
+    from { transform: translateY(-20px); }
+    to { transform: translateY(340px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .portal-scanline { animation: none; display: none; }
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  }
+}

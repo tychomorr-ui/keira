@@ -17,6 +17,13 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }).unique(),
   /** Scrypt-derived password hash. Never store plaintext passwords. */
   passwordHash: text("passwordHash"),
+  /** User-controlled identity layer for Portal presence. */
+  avatarUrl: text("avatarUrl"),
+  avatarGlyph: varchar("avatarGlyph", { length: 16 }),
+  alienBio: text("alienBio"),
+  preferredVoice: varchar("preferredVoice", { length: 255 }),
+  voiceRate: int("voiceRate").default(100).notNull(),
+  voicePitch: int("voicePitch").default(100).notNull(),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

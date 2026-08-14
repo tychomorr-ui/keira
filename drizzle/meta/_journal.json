@@ -43,6 +43,13 @@
       "when": 1786660222833,
       "tag": "0005_misty_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786666835556,
+      "tag": "0006_unique_bucky",
+      "breakpoints": true
     }
   ]
 }

@@ -61,3 +61,13 @@
 - [x] Verify the current Portal preview loads without syntax errors and leave auth design unchanged
 - [x] Run TypeScript and full Vitest checks
 - [x] Save a syntax-error repair checkpoint
+
+
+## Alien-Neon Interactive Portal & Voice Upgrade
+- [x] Add persistent profile storage (avatar url / emoji, alien bio, voice preference) in the database and tRPC
+- [x] Implement automatic esoteric keyword extraction and glowing inline keyword highlighting in Portal messages
+- [x] Make all conversation threads, new chat creation, settings, and profile controls fully interactive in the UI
+- [x] Upgrade the interface with futuristic alien-neon visual styling, glowing borders, and smooth motion
+- [x] Add selectable synthetic voice synthesis (speech rate, pitch, voice profile) and interruption-aware audio playback
+- [x] Run strict TypeScript compilation and all Vitest tests
+- [x] Save an alien-interactive checkpoint and guide the user to publish it
