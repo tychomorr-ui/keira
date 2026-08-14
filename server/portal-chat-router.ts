@@ -80,8 +80,14 @@ export const portalChatRouter = router({
 
       const userCreatedAt = userRecord[0].createdAt;
 
-      // Retrieve comprehensive user context
+      // Retrieve comprehensive user context and attach user profile settings
       const userContext = await retrieveUserContext(ctx.user.id, userCreatedAt);
+      (userContext as any).profile = {
+        customPersona: userRecord[0].customPersona,
+        customInstructions: userRecord[0].customInstructions,
+        modelTemperature: userRecord[0].modelTemperature,
+        predictiveSensitivity: userRecord[0].predictiveSensitivity,
+      };
 
       // Classify learning stage
       const stageClassification = classifyLearningStage(userContext);

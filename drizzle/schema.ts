@@ -24,6 +24,10 @@ export const users = mysqlTable("users", {
   preferredVoice: varchar("preferredVoice", { length: 255 }),
   voiceRate: int("voiceRate").default(100).notNull(),
   voicePitch: int("voicePitch").default(100).notNull(),
+  customPersona: text("customPersona"),
+  customInstructions: text("customInstructions"),
+  modelTemperature: int("modelTemperature").default(20).notNull(), // stored as integer e.g. 20 -> 0.2
+  predictiveSensitivity: int("predictiveSensitivity").default(75).notNull(),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

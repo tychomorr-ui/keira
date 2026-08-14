@@ -100,4 +100,12 @@
 - [x] Verify branded preview, run TypeScript and Vitest checks, and save a branding checkpoint (checkpoint 9a08f0cf)
 - [x] Change the exact visible product name from "The Portal" to "Portal" across browser metadata, application title, and user-facing branding
 - [x] Run branding regression and TypeScript checks, then save the Portal branding checkpoint (checkpoint 9a08f0cf)
-- [ ] Explicitly verify the live preview shows the exact Portal branding and save a post-verification checkpoint
+- [x] Explicitly verify the live preview shows the exact Portal branding and save a post-verification checkpoint (checkpoint ad85f55f)
+
+## Adaptive Personalization, Suspenseful Atmosphere & Profound Session Export
+- [x] Extend database schema and tRPC profile procedures with custom persona, custom instructions, model temperature, and predictive sensitivity
+- [x] Wire custom persona, instructions, and predictive recursive calibration into the adaptive response engine
+- [x] Add dedicated settings panel for persona tuning, custom operator prompts, and prediction calibration
+- [x] Implement suspenseful typing animation and subtle atmospheric visual effects in the chat interface
+- [x] Add secure encrypted JSON transcript export and profound-session saving for review
+- [x] Run strict TypeScript compilation and pass all 103 Vitest tests successfully

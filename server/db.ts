@@ -95,6 +95,10 @@ export async function updateUserProfile(id: number, input: {
   preferredVoice?: string | null;
   voiceRate?: number;
   voicePitch?: number;
+  customPersona?: string | null;
+  customInstructions?: string | null;
+  modelTemperature?: number;
+  predictiveSensitivity?: number;
 }) {
   const database = await getDb();
   if (!database) throw new Error("Database is not available");

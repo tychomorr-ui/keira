@@ -80,6 +80,10 @@ export const appRouter = router({
         preferredVoice: z.string().trim().max(255).nullable().optional(),
         voiceRate: z.number().int().min(60).max(180).optional(),
         voicePitch: z.number().int().min(50).max(150).optional(),
+        customPersona: z.string().trim().max(1000).nullable().optional(),
+        customInstructions: z.string().trim().max(2000).nullable().optional(),
+        modelTemperature: z.number().int().min(0).max(100).optional(),
+        predictiveSensitivity: z.number().int().min(0).max(100).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const updated = await db.updateUserProfile(ctx.user.id, input);
