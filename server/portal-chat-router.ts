@@ -139,11 +139,9 @@ export const portalChatRouter = router({
           resistanceLevel: userContext.synthesis.resistanceLevel,
           stageTransition: stageTransition.isTransitioning ? stageTransition.nextStage : null,
           nextAction: adaptiveResponse.metadata.nextSuggestedAction,
-<<<<<<< HEAD
           provider: adaptiveResponse.metadata.provider,
           modelId: adaptiveResponse.metadata.modelId,
           latencyMs,
-=======
           cmap: {
             sessionId: missionState.sessionId,
             handshakeComplete: true,
@@ -154,7 +152,6 @@ export const portalChatRouter = router({
             openQuestions: missionState.openQuestions,
             nextAction: missionState.nextAction,
           },
->>>>>>> user_github/main
         },
       };
     }),
