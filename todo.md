@@ -115,3 +115,8 @@
 - [x] Add category, tag, and search organization for profound session exports and archives
 - [x] Add a truthful predictive-calibration progress indicator reflecting response generation stages
 - [x] Verify all 104 Vitest regression tests and strict TypeScript compilation pass successfully
+
+## Immersive Dark Mode & Proactive Premonition Notifications
+- [x] Implement deeper immersive dark-mode palette with subtle atmospheric background pulse animations
+- [x] Build consent-based proactive premonition notification system for latent conversation threads
+- [x] Run strict TypeScript compilation and pass all 105 Vitest regression tests successfully
