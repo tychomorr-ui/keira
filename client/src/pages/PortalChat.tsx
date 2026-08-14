@@ -26,7 +26,10 @@ import {
   ShieldCheck,
   Sparkles,
   X,
+  Download,
+  FileCode2,
 } from "lucide-react";
+import { ESOTERIC_PROMPT_PRESETS } from "../../../shared/esotericPrompts";
 import { Streamdown } from "streamdown";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -276,6 +279,26 @@ export default function PortalChat() {
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
+  };
+
+  const exportEncryptedTranscript = () => {
+    const payload = {
+      version: "1.0",
+      exportedAt: new Date().toISOString(),
+      operator: user?.email || "anonymous",
+      conversationId: activeConversationId,
+      messages,
+      esotericLexicon: esotericKeywords,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `portal-transcript-${activeConversationId || "session"}-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const stopSpeaking = () => {
@@ -644,19 +667,47 @@ export default function PortalChat() {
                 <div className="uppercase tracking-[0.2em] text-[#737b8f]">Resonance</div>
                 <div className="mt-1 truncate text-[#e8ddff]" title={resonanceCue}>{resonanceCue}</div>
               </div>
-              <div className="sm:text-right">
-                <div className="uppercase tracking-[0.2em] text-[#737b8f]">Conversation memory</div>
-                <button
-                  type="button"
-                  onClick={() => setShowContextPanel((current) => !current)}
-                  className="mt-1 inline-flex items-center gap-1 text-[#a6aec0] transition hover:text-[#f3eadb]"
-                  aria-expanded={showContextPanel}
-                >
-                  {cmap ? `${cmap.decisions.length} anchors · ${cmap.evidence.length} signals · ${cmap.openQuestions.length} questions` : "Awaiting Contact"}
-                  <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showContextPanel ? "rotate-90" : ""}`} />
-                </button>
+              <div className="flex items-center justify-between sm:justify-end gap-3">
+                <div className="sm:text-right">
+                  <div className="uppercase tracking-[0.2em] text-[#737b8f]">Conversation memory</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowContextPanel((current) => !current)}
+                    className="mt-1 inline-flex items-center gap-1 text-[#a6aec0] transition hover:text-[#f3eadb]"
+                    aria-expanded={showContextPanel}
+                  >
+                    {cmap ? `${cmap.decisions.length} anchors · ${cmap.evidence.length} signals · ${cmap.openQuestions.length} questions` : "Awaiting Contact"}
+                    <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showContextPanel ? "rotate-90" : ""}`} />
+                  </button>
+                </div>
+                {messages.length > 0 && (
+                  <Button type="button" onClick={exportEncryptedTranscript} className="h-8 rounded-none border border-[#6f55c7] bg-[#21154d]/50 px-3 text-[0.62rem] uppercase tracking-[0.16em] text-[#8be9ff] hover:bg-[#21154d]" aria-label="Export secure transcript"><Download className="mr-1.5 h-3.5 w-3.5" /> Export</Button>
+                )}
               </div>
             </div>
+
+            {messages.length === 0 && (
+              <section className="border-b border-[#1a2240] py-6" aria-label="Esoteric prompt presets">
+                <div className="mb-3 text-[0.62rem] uppercase tracking-[0.22em] text-[#737b8f]">Specialized inquiry vectors</div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {ESOTERIC_PROMPT_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setInputValue(preset.prompt)}
+                      className="group border border-[#273865] bg-[#090f24] p-4 text-left transition hover:border-[#8be9ff] hover:bg-[#101a38]"
+                    >
+                      <div className="flex items-center justify-between text-[0.62rem] uppercase tracking-[0.18em] text-[#b8a1ff]">
+                        <span>{preset.category}</span>
+                        <ChevronRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                      </div>
+                      <div className="mt-2 font-serif text-sm font-medium text-[#f3eadb]">{preset.title}</div>
+                      <div className="mt-1.5 text-xs leading-relaxed text-[#737b8f]">{preset.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {showContextPanel && (
               <div className="grid gap-4 border-b border-[#202637] py-4 text-xs sm:grid-cols-3" aria-label="Conversation memory details">
@@ -707,7 +758,27 @@ export default function PortalChat() {
                   <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Rate <input aria-label="Voice rate" type="range" min="60" max="140" value={profileDraft.voiceRate} onChange={(event) => setProfileDraft((draft) => ({ ...draft, voiceRate: Number(event.target.value) }))} /></label>
                   <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Pitch <input aria-label="Voice pitch" type="range" min="70" max="130" value={profileDraft.voicePitch} onChange={(event) => setProfileDraft((draft) => ({ ...draft, voicePitch: Number(event.target.value) }))} /></label>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2"><Button type="button" onClick={isSpeaking ? stopSpeaking : speakLastPortalMessage} disabled={!messages.some((message) => message.role === "portal")} className="rounded-none border border-[#273865] bg-transparent text-[#8be9ff] hover:bg-[#13213e]">{isSpeaking ? <Pause className="mr-2 h-4 w-4" /> : <Volume2 className="mr-2 h-4 w-4" />}{isSpeaking ? "Interrupt voice" : "Speak last response"}</Button><Button type="button" onClick={handleSaveProfile} disabled={profileSaving} className="rounded-none bg-[#8be9ff] text-[#041018] hover:bg-[#c4f7ff]"><Save className="mr-2 h-4 w-4" /> Save voice</Button></div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={isSpeaking ? stopSpeaking : speakLastPortalMessage} disabled={!messages.some((message) => message.role === "portal")} className="rounded-none border border-[#273865] bg-transparent text-[#8be9ff] hover:bg-[#13213e]">
+                      {isSpeaking ? <Pause className="mr-2 h-4 w-4 animate-pulse" /> : <Volume2 className="mr-2 h-4 w-4" />}
+                      {isSpeaking ? "Interrupt voice" : "Speak last response"}
+                    </Button>
+                    <Button type="button" onClick={handleSaveProfile} disabled={profileSaving} className="rounded-none bg-[#8be9ff] text-[#041018] hover:bg-[#c4f7ff]">
+                      <Save className="mr-2 h-4 w-4" /> Save voice
+                    </Button>
+                  </div>
+                  {isSpeaking && (
+                    <div className="flex items-center gap-1 px-3 py-1" aria-label="Speech visualizer active">
+                      <span className="h-5 w-1 animate-pulse bg-[#8be9ff]" style={{ animationDuration: "350ms" }} />
+                      <span className="h-7 w-1 animate-pulse bg-[#b8a1ff]" style={{ animationDuration: "250ms" }} />
+                      <span className="h-4 w-1 animate-pulse bg-[#06b6d4]" style={{ animationDuration: "450ms" }} />
+                      <span className="h-6 w-1 animate-pulse bg-[#8be9ff]" style={{ animationDuration: "300ms" }} />
+                      <span className="h-3 w-1 animate-pulse bg-[#b8a1ff]" style={{ animationDuration: "400ms" }} />
+                      <span className="ml-2 text-[0.62rem] uppercase tracking-[0.2em] text-[#8be9ff]">Resonating</span>
+                    </div>
+                  )}
+                </div>
               </section>
             )}
 
