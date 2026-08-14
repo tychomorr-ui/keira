@@ -79,3 +79,18 @@
 - [x] Formulate sovereign multi-region node placement strategy across Singapore, Frankfurt, Oregon, Tokyo, and Hong Kong
 - [x] Define Bedrock API gateway integration with deterministic temperature and model fallbacks
 - [x] Save final architectural roadmap and checkpoint
+
+
+## Additional Global Node Placement Advisory
+- [x] Exclude Singapore, Frankfurt, Oregon, and Ireland from candidate set
+- [x] Evaluate alternative AWS regions (e.g. Tokyo `ap-northeast-1`, São Paulo `sa-east-1`, London `eu-west-2`, Sydney `ap-southeast-2`) for an independent Portal instance
+- [x] Formulate direct, definitive location recommendation based on latency, peering, and sovereign isolation
+
+
+## Amazon Bedrock Gateway
+- [ ] Add AWS Bedrock Runtime SDK dependency
+- [ ] Implement server-side Bedrock gateway with deterministic model routing and timeout handling
+- [ ] Wire Bedrock gateway into Portal chat orchestration with fallback behavior
+- [ ] Add server-only AWS credential configuration and regression tests
+- [ ] Run TypeScript and full Vitest checks
+- [ ] Save Bedrock integration checkpoint

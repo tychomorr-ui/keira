@@ -5,4 +5,13 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
+  awsSessionToken: process.env.AWS_SESSION_TOKEN ?? "",
+  bedrockRegion: process.env.BEDROCK_REGION ?? process.env.AWS_REGION ?? "",
+  bedrockModelId: process.env.BEDROCK_MODEL_ID ?? "",
+  bedrockMaxTokens: Number(process.env.BEDROCK_MAX_TOKENS ?? 4096),
+  bedrockTemperature: Number(process.env.BEDROCK_TEMPERATURE ?? 0.1),
+  bedrockTopP: Number(process.env.BEDROCK_TOP_P ?? 0.9),
+  bedrockTimeoutMs: Number(process.env.BEDROCK_TIMEOUT_MS ?? 60000),
 };
