@@ -16,10 +16,10 @@
   ],
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663613736850/hKCGwyE7WuTJBF8owbhcsP",
-    "access_key_id": "ASIAZV3A2ECZMAOK2EXO",
-    "secret_access_key": "DAd331dbU9eusgMz3BBaIlftlyZw8bAtPpM6YzW6",
-    "session_token": "IQoJb3JpZ2luX2VjECYaCXVzLWVhc3QtMSJGMEQCIDzJvcdhOxAJSU1cK0KEbkKrjAgsY0kgcNOSoBvuy1uoAiBWa1mjlbwneHTccf9OUg4DxK71njn1jWf6sxMCe1MhCSr/Awju//////////8BEAQaDDY2NTM4NjA5ODg2NiIMjj9msjtMLtZ3mFskKtMDipi6NbbzPc2tSLQUjDOMZjWlHYc38OmS6LZW7/gYixL4Z44w4J7RAnZbV63CgM05doJLjuwmRvVwuGyfOHYCwa1quoDtbpMYUQ3RalFzfTpPrrmJBIWx/rD5xr5SUqGRO97iy4zL5cRpphxRYAx8XxbkpEG5E8/Tl9OFghnj81uhELVb0rk4HM5VNzEioSRA9tX81QCL61c8SKVNynYe8CF5DcKuKNTmLBUWBHuTHkK9+MClDquAoAzN3DC4ywq3r9v0MlHhloLIIvpW8T1PxgOmgKfm79DgnLptWCtWmRSfVnsRIoOliJTRpDzJ1h8JuUPBUEvPJFjzeSHzUhZ95PhtmwKnjYU9MjlzMM1MJrqCk+Q3QKiJYSi6ZilamCNTqyCTHk1m30LjOLsEVN9O5vEcdBQw+fA/J5liJa9ayRiXXwd0d7Eq+X08qE85wILyNERWXT0BZ6n8dRlQvEAffv1irJt1RSPkYErUPlfuSVa/34MOEwsIupTEE13MqtV2aoBouTeZLImvsrri+Umrjjg8SguJZGsrxlikn77CyDMjqQL2a0Uhh05mEPG45U4zDcLP6nbA+puvBn1vULhhEe4KKqtp9FaClG/M+607pEALLJAw1uP40wY6ngHBuS8CoEKqyW9hGBfWMYWqC4Bdtm5LoKoIVQxhi3Dluwz2HcNaatne+hW+NUf1DBY0HATVOnWM8i6bEGbJHBGnwlucAEK6adMiXF3uB3ZTU8UeXFgd9wSozB/uVKGiqi/Cg4mn5A2akzn41oOSbL2FrjowuO38FhS0SKcyzOX5PimjNMnPeQdvzZpef14TFUtl2hlnMpDzoRmyJFfcvQ==",
-    "expiration": "2026-08-14T09:06:30.000Z",
+    "access_key_id": "ASIAZV3A2ECZLWL57R2O",
+    "secret_access_key": "Q+yTXYl0ECAEp8nnpHUdcgkBxAmdZTIPI3kp/RVk",
+    "session_token": "IQoJb3JpZ2luX2VjECwaCXVzLWVhc3QtMSJHMEUCIC4F74EnfDr6vS9IskqKwoeMItXmHwZgJNaBizfJv/TPAiEAl1jCVOUuBqvTe0zufdhdH63qApoqS8GhKzHWN8zUvZsq/wMI9P//////////ARAEGgw2NjUzODYwOTg4NjYiDNMokG2QrcvFZ3XMqirTA8PVsp8chN+xJ8j4TsFOtwfMSwnII1UimZ7NxoYN6pHpc+gpWS9gLAgnjnoCGpbNBhdSc8IsCBnXADVuktaU2VCcau8L8kYCbq3dZfpHHe8fYJZ0NBvrimjgfFiv8ocnvepaztmy84gIdqCEi94DIB6Sd4tq5302TqAHlA66vH86HnAH1y5gkuFn7QZb51CriD4wFF65AP6aGtZbSSgmt5DAe+zXJCUekVTbqYylMLjp744zdXHsSQ4J5SPD95jAuuNNn42QYZ5LsBJYe5bv9ms3HmfO3+j/ynnRg3ck53cFX1uCLbD08E3rjLfB/5PVJgwEVEw6j+4pgyZFDUCXOUMwFFRCrldyB3xU8qYN9XYg//JvCmrXCeJ2lPh8WT/RFjSV09baftv5804Aj/Xi1A4m3WGxqANGFTv/yRjG2i71B4AEbuay41pdWjUalNmW7KkyEZkjC/hxgb74jpmxvVOczNji0PO/c3qCSiUkzvDNxRnc4nWXu+TVQVSQebSSoyHUxHz4qe7Xd633yFUJ0PkXh5Nh/Jg4CBnt6BPrgrRGtVXphkrb52p/VIvRImJhmv7ATRIktDAa/3wgjgAQamQJVb1KIHSUqovYKDH70AfdskL0MLyM+tMGOp0Bg6TyDB0ej9/LB30JYLvslC5SUmPSm8KocfwAzpdlyvDFLisLlED0wVqcx8MFiuHlNUSyRP8hhV0SRrNNP7qUrr3yTXe4rACbr6xqjMkqMwHx9j2jMEbec9cx9en0og6NpFI67ItuLsDl4TAvrpI3TzaI/DBkHoPdaokf1hrGQbbcww23HsX40i77pvo4NBmPSwNh2dBRNZCaEVpj9g==",
+    "expiration": "2026-08-14T15:06:36.000Z",
     "backend": "GIT_BACKEND_S3"
   },
   "name": "sovereign-truth-engine-app",
@@ -39,7 +39,7 @@
     "VITE_ANALYTICS_WEBSITE_ID": "7cf0ed5b-d013-46bc-8e43-e0b857b393b9",
     "VITE_APP_ID": "hKCGwyE7WuTJBF8owbhcsP",
     "VITE_APP_LOGO": "https://files.manuscdn.com/user_upload_by_module/web_dev_logo/310519663613736850/yWPCbvbxeqqFbLAu.png",
-    "VITE_APP_TITLE": "Sovereign Truth Engine",
+    "VITE_APP_TITLE": "Portal",
     "VITE_FRONTEND_FORGE_API_KEY": "TrRGLk8jzcw3ukexuydcRR",
     "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
     "VITE_OAUTH_PORTAL_URL": "https://manus.im",

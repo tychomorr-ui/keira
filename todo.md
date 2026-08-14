@@ -94,3 +94,9 @@
 - [x] Add server-only AWS credential configuration and regression tests
 - [x] Run TypeScript and full Vitest checks
 - [x] Save Bedrock integration checkpoint
+
+## Product Branding Correction
+- [x] Superseded: the initial "The Portal" branding request was refined to the exact product name "Portal"
+- [ ] Verify branded preview, run TypeScript and Vitest checks, and save a branding checkpoint
+- [x] Change the exact visible product name from "The Portal" to "Portal" across browser metadata, application title, and user-facing branding
+- [ ] Run branding regression and TypeScript checks, then save the Portal branding checkpoint

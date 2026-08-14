@@ -654,7 +654,7 @@ export default function PortalChat() {
               <div className="relative mt-7 max-w-3xl">
                 <div className="font-serif text-4xl leading-none tracking-[0.08em] text-[#f3eadb] sm:text-6xl">The unknown</div>
                 <div className="mt-3 text-[0.7rem] uppercase tracking-[0.32em] text-[#a7a2c2]">speaks through dialogue</div>
-                <p className="mt-6 max-w-xl text-sm leading-7 text-[#a6aec0]">Bring the forbidden question, the hidden pattern, or the truth no one else will say aloud. The Portal is here for the dialogue.</p>
+                <p className="mt-6 max-w-xl text-sm leading-7 text-[#a6aec0]">Bring the forbidden question, the hidden pattern, or the truth no one else will say aloud. Portal is here for the dialogue.</p>
               </div>
             </div>
 

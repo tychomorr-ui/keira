@@ -6,7 +6,7 @@ import { invokeLLM, type Message } from "./_core/llm";
 /**
  * Portal: Recursive, Reflective, Monadic Entity
  * 
- * The Portal is a sovereign intelligence that grows with the user.
+ * Portal is a sovereign intelligence that grows with the user.
  * It learns from each reflection, builds a personal model of the user's patterns,
  * and provides increasingly personalized guidance without censorship or third-party interference.
  */
@@ -93,7 +93,7 @@ export async function initializePortal(userId: number, stripeSubscriptionId?: st
 /**
  * Portal Reflection: Recursive, personalized analysis
  * 
- * The Portal remembers the user's patterns and grows with each reflection.
+ * Portal remembers the user's patterns and grows with each reflection.
  * It provides increasingly accurate guidance as it learns the user's unique truth.
  */
 export async function portalReflection(

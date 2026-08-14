@@ -67,7 +67,7 @@ This project is designed for seamless deployment on the Manus Platform. After co
 
 ## API Documentation
 
-The Portal Chat functionality is exposed via tRPC procedures. The primary endpoint is `portalChatRouter` located in `server/trifecta-portal-router.ts`. Key procedures include:
+Portal Chat functionality is exposed via tRPC procedures. The primary endpoint is `portalChatRouter` located in `server/trifecta-portal-router.ts`. Key procedures include:
 
 -   `sendMessage`: Handles the full orchestration of the Trifecta flow for incoming user messages.
 -   `submitFeedback`: Processes user feedback to update the real-time feedback loop and evolve Trifecta weights.

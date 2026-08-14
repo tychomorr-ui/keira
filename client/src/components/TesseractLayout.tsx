@@ -24,7 +24,7 @@ export default function TesseractLayout({
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-4">Tesseract</h1>
-          <p className="text-slate-300 mb-8">The Sovereign Truth Engine</p>
+          <p className="text-slate-300 mb-8">Portal</p>
           <Button
             onClick={() => (window.location.href = "/")}
             className="bg-amber-600 hover:bg-amber-700 text-white"

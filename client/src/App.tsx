@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import PortalChat from "@/pages/PortalChat";
@@ -20,6 +21,10 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    document.title = import.meta.env.VITE_APP_TITLE || "Portal";
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
