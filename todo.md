@@ -137,3 +137,8 @@
 - [x] Temporarily bypass the Portal authentication entry gate so users can open and chat directly without signing in
 - [x] Securely rotate the private owner access token (`PORTAL_OWNER_ACCESS_TOKEN`)
 - [x] Run strict TypeScript compilation and pass all 108 Vitest regression tests successfully
+
+## Custom Owner Key Rotation & Auth Gate Restoration
+- [x] Securely configure a newly chosen custom private owner access key (`PORTAL_OWNER_ACCESS_TOKEN`)
+- [x] Restore the clean authentication owner-entry gate so authenticated sessions correctly unlock the fully functional protected chat API
+- [x] Run strict TypeScript compilation and pass all 109 Vitest tests successfully
