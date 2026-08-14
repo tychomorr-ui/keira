@@ -71,3 +71,11 @@
 - [x] Add selectable synthetic voice synthesis (speech rate, pitch, voice profile) and interruption-aware audio playback
 - [x] Run strict TypeScript compilation and all Vitest tests
 - [x] Save an alien-interactive checkpoint and guide the user to publish it
+
+
+## Bedrock Integration & Global Node Placement
+- [x] Analyze Amazon Bedrock model availability, cross-region inference profiles, and credential requirements
+- [x] Design **The Portal** branding and `portal.xinus.one` domain architecture
+- [x] Formulate sovereign multi-region node placement strategy across Singapore, Frankfurt, Oregon, Tokyo, and Hong Kong
+- [x] Define Bedrock API gateway integration with deterministic temperature and model fallbacks
+- [x] Save final architectural roadmap and checkpoint
