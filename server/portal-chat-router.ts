@@ -78,6 +78,7 @@ export const portalChatRouter = router({
         content: msg.content,
       }));
 
+      const startTime = Date.now();
       // Generate adaptive response
       const adaptiveResponse = await generateAdaptiveResponse(
         message,
@@ -85,6 +86,7 @@ export const portalChatRouter = router({
         strategySelection,
         recentMessages
       );
+      const latencyMs = Date.now() - startTime;
 
       // Add Portal response
       await portalChat.addMessage(
@@ -112,6 +114,9 @@ export const portalChatRouter = router({
           resistanceLevel: userContext.synthesis.resistanceLevel,
           stageTransition: stageTransition.isTransitioning ? stageTransition.nextStage : null,
           nextAction: adaptiveResponse.metadata.nextSuggestedAction,
+          provider: adaptiveResponse.metadata.provider,
+          modelId: adaptiveResponse.metadata.modelId,
+          latencyMs,
         },
       };
     }),
