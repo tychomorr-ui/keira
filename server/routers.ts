@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { clearSessionCookie, createSessionToken, hashPassword, setSessionCookie, verifyPassword } from "./sovereign-auth";
+import { clearSessionCookie, createSessionToken, hashPassword, isValidOwnerAccessToken, setSessionCookie, verifyPassword } from "./sovereign-auth";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
@@ -70,6 +70,23 @@ export const appRouter = router({
 
         setSessionCookie(ctx.req, ctx.res, await createSessionToken({ userId: updated.id, name: updated.name || input.name }));
         return updated;
+      }),
+
+    ownerBootstrap: publicProcedure
+      .input(z.object({ token: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        if (!isValidOwnerAccessToken(input.token)) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid owner access token." });
+        }
+
+        const owner = await db.getUserByName("Tyler Morris") ?? await db.getUserByEmail("tycole716@gmail.com") ?? await db.getUserByEmail("tychomorr@gmail.com");
+        if (!owner) throw new TRPCError({ code: "NOT_FOUND", message: "Owner account is not provisioned." });
+
+        const promoted = await db.promoteUserToOwner(owner.id);
+        if (!promoted) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Owner session could not be created." });
+
+        setSessionCookie(ctx.req, ctx.res, await createSessionToken({ userId: promoted.id, name: "Tyler Morris" }));
+        return promoted;
       }),
 
     logout: publicProcedure.mutation(({ ctx }) => {

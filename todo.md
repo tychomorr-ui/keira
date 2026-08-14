@@ -38,3 +38,18 @@
 - [x] Build clean sovereign login, registration, and account claim forms inside PortalChat.tsx
 - [x] Run strict TypeScript compilation and pass all 96 Vitest tests
 - [x] Save sovereign authentication checkpoint
+
+
+## Owner-First Portal Access Simplification
+- [x] Remove the confusing Enter/Create/Claim tabs and replace with a direct, single-click owner entry or simple sign-in
+- [x] Recognize Tyler Morris as the creator and provide a dedicated secure owner-bootstrap path without a public admin bypass
+- [x] Run strict TypeScript compilation and Vitest tests
+- [ ] Save simplified-access checkpoint
+
+
+## Tyler Morris Owner-First Entry
+- [x] Bind owner recognition to Tyler Morris (`tycole716@gmail.com` / `tychomorr@gmail.com`)
+- [x] Add `ownerBootstrap` procedure to establish an immediate sovereign session for Tyler Morris
+- [x] Replace the three auth tabs in PortalChat.tsx with a clean "Enter Portal as Tyler Morris" one-click owner entry + standard email/password login
+- [x] Run strict TypeScript compilation and Vitest tests
+- [ ] Save Tyler Morris access checkpoint

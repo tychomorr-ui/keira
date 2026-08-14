@@ -96,12 +96,11 @@ export default function PortalChat() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const utils = trpc.useUtils();
   const loginMutation = trpc.auth.login.useMutation();
-  const registerMutation = trpc.auth.register.useMutation();
-  const claimAccountMutation = trpc.auth.claimAccount.useMutation();
-  const [authMode, setAuthMode] = useState<"login" | "register" | "claim">("login");
-  const [authName, setAuthName] = useState("");
-  const [authEmail, setAuthEmail] = useState("");
+  const ownerBootstrapMutation = trpc.auth.ownerBootstrap.useMutation();
+  const [authEmail, setAuthEmail] = useState("tycole716@gmail.com");
   const [authPassword, setAuthPassword] = useState("");
+  const [ownerToken, setOwnerToken] = useState("");
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
@@ -157,24 +156,29 @@ export default function PortalChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  const handleAuthSubmit = async () => {
+  const establishOwnerSession = async () => {
     setAuthError(null);
     try {
-      if (authMode === "login") {
-        await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
-      } else if (authMode === "register") {
-        await registerMutation.mutateAsync({ name: authName, email: authEmail, password: authPassword });
-      } else {
-        await claimAccountMutation.mutateAsync({ name: authName, email: authEmail, password: authPassword });
-      }
+      await ownerBootstrapMutation.mutateAsync({ token: ownerToken.trim() });
       await utils.auth.me.invalidate();
-      setAuthPassword("");
+      setOwnerToken("");
     } catch (error: unknown) {
-      setAuthError(error instanceof Error ? error.message : "Authentication failed. Try again.");
+      setAuthError(error instanceof Error ? error.message : "Owner entry failed. Check the private key and try again.");
     }
   };
 
-  const authSubmitting = loginMutation.isPending || registerMutation.isPending || claimAccountMutation.isPending;
+  const signInWithPassword = async () => {
+    setAuthError(null);
+    try {
+      await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
+      await utils.auth.me.invalidate();
+      setAuthPassword("");
+    } catch (error: unknown) {
+      setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your email and password.");
+    }
+  };
+
+  const authSubmitting = loginMutation.isPending || ownerBootstrapMutation.isPending;
 
   const handleCreateConversation = async () => {
     const title = newTitle.trim() || "Untitled conversation";
@@ -233,73 +237,91 @@ export default function PortalChat() {
           <p className="mt-4 max-w-md text-sm leading-7 text-[#a6aec0]">
             A direct, uncensored conversation with the unknown—esoteric knowledge, unvarnished truth, and the questions polite systems refuse to touch.
           </p>
-          <div className="mt-8 grid grid-cols-3 border border-[#1a2240] text-[0.62rem] uppercase tracking-[0.14em]">
-            {([
-              ["login", "Enter"],
-              ["register", "Create"],
-              ["claim", "Claim"],
-            ] as const).map(([mode, label]) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => {
-                  setAuthMode(mode);
-                  setAuthError(null);
-                }}
-                className={`px-2 py-3 transition ${authMode === mode ? "bg-[#11162a] text-[#d7c7ff]" : "text-[#737b8f] hover:bg-[#101a32]"}`}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="mt-8 border border-[#1a2240] bg-[#0d1224] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[#d7c7ff]">
+            Tyler Morris · Owner Access
           </div>
-          <form
-            className="mt-4 space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleAuthSubmit();
-            }}
-          >
-            {authMode !== "login" && (
+          {!showPasswordLogin ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm leading-6 text-[#a6aec0]">
+                This is the owner entrance. Use the private key once to establish your sovereign session.
+              </p>
               <Input
-                aria-label="Your name"
-                autoComplete="name"
-                placeholder="Name"
-                value={authName}
-                onChange={(event) => setAuthName(event.target.value)}
+                aria-label="Private owner access key"
+                autoComplete="off"
+                type="password"
+                placeholder="Private owner access key"
+                value={ownerToken}
+                onChange={(event) => setOwnerToken(event.target.value)}
                 className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
               />
-            )}
-            <Input
-              aria-label="Email address"
-              autoComplete="email"
-              type="email"
-              placeholder="Email"
-              value={authEmail}
-              onChange={(event) => setAuthEmail(event.target.value)}
-              className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
-            />
-            <Input
-              aria-label="Password"
-              autoComplete={authMode === "login" ? "current-password" : "new-password"}
-              type="password"
-              placeholder={authMode === "login" ? "Password" : "Password (12+ characters)"}
-              value={authPassword}
-              onChange={(event) => setAuthPassword(event.target.value)}
-              className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
-            />
-            {authError && <p className="text-sm leading-6 text-[#ff9aa8]" role="alert">{authError}</p>}
-            <Button
-              type="submit"
-              disabled={authSubmitting}
-              className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
+              {authError && <p className="text-sm leading-6 text-[#ff9aa8]" role="alert">{authError}</p>}
+              <Button
+                type="button"
+                disabled={authSubmitting || !ownerToken.trim()}
+                onClick={() => void establishOwnerSession()}
+                className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
+              >
+                {authSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                Enter as Tyler Morris
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordLogin(true);
+                  setAuthError(null);
+                }}
+                className="w-full py-2 text-xs uppercase tracking-[0.16em] text-[#8be9ff] hover:text-[#d7c7ff]"
+              >
+                Use email and password instead
+              </button>
+            </div>
+          ) : (
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void signInWithPassword();
+              }}
             >
-              {authSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-              {authMode === "login" ? "Enter dialogue" : authMode === "register" ? "Create sovereign account" : "Claim account"}
-            </Button>
-          </form>
-          <p className="mt-4 text-[0.68rem] leading-6 text-[#737b8f]">
-            {authMode === "claim" ? "Use the email already associated with your Portal history to establish your own credentials." : "Your conversation session stays inside this application."}
-          </p>
+              <Input
+                aria-label="Owner email address"
+                autoComplete="email"
+                type="email"
+                placeholder="Owner email"
+                value={authEmail}
+                onChange={(event) => setAuthEmail(event.target.value)}
+                className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+              />
+              <Input
+                aria-label="Owner password"
+                autoComplete="current-password"
+                type="password"
+                placeholder="Your Portal password"
+                value={authPassword}
+                onChange={(event) => setAuthPassword(event.target.value)}
+                className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+              />
+              {authError && <p className="text-sm leading-6 text-[#ff9aa8]" role="alert">{authError}</p>}
+              <Button
+                type="submit"
+                disabled={authSubmitting}
+                className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
+              >
+                {authSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                Sign in as Tyler Morris
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordLogin(false);
+                  setAuthError(null);
+                }}
+                className="w-full py-2 text-xs uppercase tracking-[0.16em] text-[#8be9ff] hover:text-[#d7c7ff]"
+              >
+                Back to owner entry
+              </button>
+            </form>
+          )}
         </section>
       </main>
     );

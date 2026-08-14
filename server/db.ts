@@ -74,6 +74,20 @@ export async function getUserById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByName(name: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.name, name)).orderBy(users.id).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function promoteUserToOwner(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  await db.update(users).set({ role: "admin", lastSignedIn: new Date() }).where(eq(users.id, id));
+  return getUserById(id);
+}
+
 export async function createSovereignUser(input: {
   email: string;
   name: string;

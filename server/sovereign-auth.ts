@@ -22,6 +22,14 @@ function secretKey() {
   return new TextEncoder().encode(ENV.cookieSecret);
 }
 
+export function isValidOwnerAccessToken(candidate: string) {
+  const configured = ENV.portalOwnerAccessToken;
+  if (!configured || !candidate) return false;
+  const candidateBuffer = Buffer.from(candidate);
+  const configuredBuffer = Buffer.from(configured);
+  return candidateBuffer.length === configuredBuffer.length && timingSafeEqual(candidateBuffer, configuredBuffer);
+}
+
 export async function hashPassword(password: string) {
   const salt = randomBytes(16);
   const derivedKey = (await scrypt(password, salt, PASSWORD_KEY_LENGTH)) as Buffer;
