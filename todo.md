@@ -53,3 +53,11 @@
 - [x] Replace the three auth tabs in PortalChat.tsx with a clean "Enter Portal as Tyler Morris" one-click owner entry + standard email/password login
 - [x] Run strict TypeScript compilation and Vitest tests
 - [x] Save Tyler Morris access checkpoint
+
+
+## Unexpected Token Build Repair
+- [x] Capture the exact browser/Vite/server state: preview is healthy; published domain still serves the pre-sovereign external-auth build
+- [x] Confirm no malformed current source or current Vite syntax error; the published site is stale and requires the latest checkpoint to be published
+- [x] Verify the current Portal preview loads without syntax errors and leave auth design unchanged
+- [x] Run TypeScript and full Vitest checks
+- [ ] Save a syntax-error repair checkpoint
