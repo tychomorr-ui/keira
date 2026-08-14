@@ -120,3 +120,7 @@
 - [x] Implement deeper immersive dark-mode palette with subtle atmospheric background pulse animations
 - [x] Build consent-based proactive premonition notification system for latent conversation threads
 - [x] Run strict TypeScript compilation and pass all 105 Vitest regression tests successfully
+
+## Clickability & Input Lock Regression Repair
+- [x] Automatically create and select a default conversation on authentication mount so chat composer input and buttons are never locked as disabled
+- [x] Verify live preview interaction, strict TypeScript compilation, and all Vitest tests

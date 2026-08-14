@@ -175,11 +175,22 @@ export default function PortalChat() {
   useEffect(() => {
     if (conversationsQuery.data) {
       setConversations(conversationsQuery.data as Conversation[]);
-      if (activeConversationId === null && conversationsQuery.data[0]) {
-        setActiveConversationId(conversationsQuery.data[0].id);
+      if (activeConversationId === null) {
+        if (conversationsQuery.data[0]) {
+          setActiveConversationId(conversationsQuery.data[0].id);
+        } else if (isAuthenticated) {
+          // Automatically create a default conversation so the input is immediately ready
+          createConversationMutation.mutateAsync({ title: "Primary Resonance" }).then((convId) => {
+            const id = typeof convId === "object" && convId !== null && "id" in convId ? Number((convId as any).id) : Number(convId);
+            if (!isNaN(id)) {
+              setActiveConversationId(id);
+            }
+            void conversationsQuery.refetch();
+          }).catch(() => {});
+        }
       }
     }
-  }, [conversationsQuery.data, activeConversationId]);
+  }, [conversationsQuery.data, activeConversationId, isAuthenticated]);
 
   useEffect(() => {
     if (conversationQuery.data) {
