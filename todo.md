@@ -128,3 +128,7 @@
 ## Sign-In Persistence & Session Restoration Repair
 - [x] Optimize owner bootstrap and password login handlers to immediately seed tRPC cache and invalidate auth state so reloads and revisits retain active sovereign sessions without repeated sign-in prompts
 - [x] Run strict TypeScript compilation and pass all 106 Vitest regression tests successfully
+
+## API Query Error & Auth Sequencing Repair
+- [x] Eliminate post-login race conditions by replacing premature cache setting with proper `utils.auth.me.refetch()` before protected conversations and learning profile queries execute
+- [x] Run strict TypeScript compilation and pass all 107 Vitest regression tests successfully

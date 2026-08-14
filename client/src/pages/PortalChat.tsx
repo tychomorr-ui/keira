@@ -233,9 +233,8 @@ export default function PortalChat() {
   const establishOwnerSession = async () => {
     setAuthError(null);
     try {
-      const res = await ownerBootstrapMutation.mutateAsync({ token: ownerToken.trim() });
-      utils.auth.me.setData(undefined, res);
-      await utils.auth.me.invalidate();
+      await ownerBootstrapMutation.mutateAsync({ token: ownerToken.trim() });
+      await utils.auth.me.refetch();
       await utils.portal.chat.getConversations.invalidate();
       setOwnerToken("");
     } catch (error: unknown) {
@@ -246,9 +245,8 @@ export default function PortalChat() {
   const signInWithPassword = async () => {
     setAuthError(null);
     try {
-      const res = await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
-      utils.auth.me.setData(undefined, res);
-      await utils.auth.me.invalidate();
+      await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
+      await utils.auth.me.refetch();
       await utils.portal.chat.getConversations.invalidate();
       setAuthPassword("");
     } catch (error: unknown) {
