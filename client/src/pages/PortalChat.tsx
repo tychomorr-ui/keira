@@ -233,8 +233,10 @@ export default function PortalChat() {
   const establishOwnerSession = async () => {
     setAuthError(null);
     try {
-      await ownerBootstrapMutation.mutateAsync({ token: ownerToken.trim() });
+      const res = await ownerBootstrapMutation.mutateAsync({ token: ownerToken.trim() });
+      utils.auth.me.setData(undefined, res);
       await utils.auth.me.invalidate();
+      await utils.portal.chat.getConversations.invalidate();
       setOwnerToken("");
     } catch (error: unknown) {
       setAuthError(error instanceof Error ? error.message : "Owner entry failed. Check the private key and try again.");
@@ -244,8 +246,10 @@ export default function PortalChat() {
   const signInWithPassword = async () => {
     setAuthError(null);
     try {
-      await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
+      const res = await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
+      utils.auth.me.setData(undefined, res);
       await utils.auth.me.invalidate();
+      await utils.portal.chat.getConversations.invalidate();
       setAuthPassword("");
     } catch (error: unknown) {
       setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your email and password.");

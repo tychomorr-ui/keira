@@ -124,3 +124,7 @@
 ## Clickability & Input Lock Regression Repair
 - [x] Automatically create and select a default conversation on authentication mount so chat composer input and buttons are never locked as disabled
 - [x] Verify live preview interaction, strict TypeScript compilation, and all Vitest tests
+
+## Sign-In Persistence & Session Restoration Repair
+- [x] Optimize owner bootstrap and password login handlers to immediately seed tRPC cache and invalidate auth state so reloads and revisits retain active sovereign sessions without repeated sign-in prompts
+- [x] Run strict TypeScript compilation and pass all 106 Vitest regression tests successfully
