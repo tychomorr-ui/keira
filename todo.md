@@ -60,4 +60,4 @@
 - [x] Confirm no malformed current source or current Vite syntax error; the published site is stale and requires the latest checkpoint to be published
 - [x] Verify the current Portal preview loads without syntax errors and leave auth design unchanged
 - [x] Run TypeScript and full Vitest checks
-- [ ] Save a syntax-error repair checkpoint
+- [x] Save a syntax-error repair checkpoint
