@@ -132,3 +132,8 @@
 ## API Query Error & Auth Sequencing Repair
 - [x] Eliminate post-login race conditions by replacing premature cache setting with proper `utils.auth.me.refetch()` before protected conversations and learning profile queries execute
 - [x] Run strict TypeScript compilation and pass all 107 Vitest regression tests successfully
+
+## Temporary Sign-In Bypass & Owner Key Rotation
+- [x] Temporarily bypass the Portal authentication entry gate so users can open and chat directly without signing in
+- [x] Securely rotate the private owner access token (`PORTAL_OWNER_ACCESS_TOKEN`)
+- [x] Run strict TypeScript compilation and pass all 108 Vitest regression tests successfully

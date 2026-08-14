@@ -16,10 +16,10 @@
   ],
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663613736850/hKCGwyE7WuTJBF8owbhcsP",
-    "access_key_id": "ASIAZV3A2ECZLWL57R2O",
-    "secret_access_key": "Q+yTXYl0ECAEp8nnpHUdcgkBxAmdZTIPI3kp/RVk",
-    "session_token": "IQoJb3JpZ2luX2VjECwaCXVzLWVhc3QtMSJHMEUCIC4F74EnfDr6vS9IskqKwoeMItXmHwZgJNaBizfJv/TPAiEAl1jCVOUuBqvTe0zufdhdH63qApoqS8GhKzHWN8zUvZsq/wMI9P//////////ARAEGgw2NjUzODYwOTg4NjYiDNMokG2QrcvFZ3XMqirTA8PVsp8chN+xJ8j4TsFOtwfMSwnII1UimZ7NxoYN6pHpc+gpWS9gLAgnjnoCGpbNBhdSc8IsCBnXADVuktaU2VCcau8L8kYCbq3dZfpHHe8fYJZ0NBvrimjgfFiv8ocnvepaztmy84gIdqCEi94DIB6Sd4tq5302TqAHlA66vH86HnAH1y5gkuFn7QZb51CriD4wFF65AP6aGtZbSSgmt5DAe+zXJCUekVTbqYylMLjp744zdXHsSQ4J5SPD95jAuuNNn42QYZ5LsBJYe5bv9ms3HmfO3+j/ynnRg3ck53cFX1uCLbD08E3rjLfB/5PVJgwEVEw6j+4pgyZFDUCXOUMwFFRCrldyB3xU8qYN9XYg//JvCmrXCeJ2lPh8WT/RFjSV09baftv5804Aj/Xi1A4m3WGxqANGFTv/yRjG2i71B4AEbuay41pdWjUalNmW7KkyEZkjC/hxgb74jpmxvVOczNji0PO/c3qCSiUkzvDNxRnc4nWXu+TVQVSQebSSoyHUxHz4qe7Xd633yFUJ0PkXh5Nh/Jg4CBnt6BPrgrRGtVXphkrb52p/VIvRImJhmv7ATRIktDAa/3wgjgAQamQJVb1KIHSUqovYKDH70AfdskL0MLyM+tMGOp0Bg6TyDB0ej9/LB30JYLvslC5SUmPSm8KocfwAzpdlyvDFLisLlED0wVqcx8MFiuHlNUSyRP8hhV0SRrNNP7qUrr3yTXe4rACbr6xqjMkqMwHx9j2jMEbec9cx9en0og6NpFI67ItuLsDl4TAvrpI3TzaI/DBkHoPdaokf1hrGQbbcww23HsX40i77pvo4NBmPSwNh2dBRNZCaEVpj9g==",
-    "expiration": "2026-08-14T15:06:36.000Z",
+    "access_key_id": "ASIAZV3A2ECZB7VEDXK6",
+    "secret_access_key": "Zi1Kl29leVGvIwSp6KfwFZPqG1FVxTCR0epi7tT1",
+    "session_token": "IQoJb3JpZ2luX2VjED4aCXVzLWVhc3QtMSJGMEQCIBY49XltX0LxrOmxYmXIfeLpqJaIc3YvuwkNxeTaQn5UAiBxs6MDIee1419HWpu4ZgCsGYSZR9abbHBNVYa3NrfMVir2AwgHEAQaDDY2NTM4NjA5ODg2NiIMNzZ5PWh84s9HMhS/KtMDQ2+TUIokdalgZSevKNYdGMsv8SmAJTCme1vwh3suB0fQzgeOzlGXHpbxgsh42Iv2n8LOCbbccpdSVJSk8ivoqun1ZsbwBHYboZeAhO6IFu1zOJZbaOG/xGNXyVf59OqRTcNuqqZycR/omODm50KNJZY7VnRxl4WrMjV0w1Q9zTU3Ucf519aKHmdWZlrmfYNwimr9P+dg7gzEVcvZM4g9olxKixhKBmydIUiOlnxxTaOfHWijme4bOfdDclb0f8a9+HJL6+NVCnhTmDhXPX/LK3nLLWwluiLJPmSy1H/cWMSJqE1yAGuAjGvxaFDl2ee0AZb0UTsnGqB+ntAN4SmAslXrM/dgfdMrlkzy/sv44HRqTEq3C5aLUf/Rb5H5w3j8cOZMQ4bjOdRXCP9NvCpyduaI/aGYaLRoscjreaAG91xewO4wqq46kEmUSHNczqY64s/kfMa/z4FFSM1h496igsnUqZuR4pdHkBewyn+i494Q7xvcX59ZiAWhl5YU0rOD+LxQq/dwf4LBxssgj/nRMOP7YjOByRCF+ALNDFFNg1jFiuyFrDMvn6cYpzMfwByV7jksz8/aSw3rn46Jl3hffd97t+t1PZJ9MRE6OPbjjBh+iAYw4I7+0wY6ngGYqzt3tGeqv1x1J/ywpVN/d+HoG6SIpWYO76F7v/MC6E16mazOsUgLrf954uKfmFBQSiJnNmCf2smvEAD0JmJf3vvsPyiO4a4TqtX8LmAEuMeGP5LE9gKtoe+Qm4JZhMo8mG25+57ZDpfGSt9ABRpacxkaY/dmdnZUKFEgSjXlUiAVVM98GalmMKgxxfLrMidJvhb3BYMMlValBLW7zg==",
+    "expiration": "2026-08-15T09:23:44.000Z",
     "backend": "GIT_BACKEND_S3"
   },
   "name": "sovereign-truth-engine-app",
@@ -32,7 +32,7 @@
     "OAUTH_SERVER_URL": "https://api.manus.im",
     "OWNER_NAME": "Tycho Morr",
     "OWNER_OPEN_ID": "JgPRztYRhgfvx8ixVUXEvw",
-    "PORTAL_OWNER_ACCESS_TOKEN": "TesseractSovereignRoot1111!!!!",
+    "PORTAL_OWNER_ACCESS_TOKEN": "Tesov-portal-key-998877-rotated-secure-2026",
     "STRIPE_SECRET_KEY": "sk_test_51TZD6F2RAmPd2Np0d8KB2KnWrUdBErvAYEPnYvTRN5EqLrlD0ATU1N4rTdxhlZkphqrpxuZk67sHd8jPgsAbEyZC00piAnj9jS",
     "STRIPE_WEBHOOK_SECRET": "whsec_zBR8Q5iipUfVV5jrWh5f51X4IndDX9Pf",
     "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
