@@ -92,12 +92,9 @@ export function extractLivingContext(
     }
   }
 
-  // Look for open questions
-  if (portalResponse.includes("?")) {
-    const questions = portalResponse
-      .split("?")
-      .filter((q) => q.trim().length > 0)
-      .map((q) => q.trim() + "?");
+  // Look for complete question sentences without swallowing prior evidence.
+  const questions = portalResponse.match(/[^.!?]*\?/g)?.map((question) => question.trim()).filter(Boolean) ?? [];
+  if (questions.length > 0) {
     updates.openQuestions = [...currentMissionState.openQuestions, ...questions];
   }
 

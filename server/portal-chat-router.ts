@@ -15,6 +15,14 @@ import { generateAdaptiveResponse, detectStageTransition } from "./portal-adapti
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import {
+  initializecMAPSession,
+  processcMAPMessage,
+  extractLivingContext,
+} from "./cmap-portal-integration";
+import { updateMissionState, type MissionState } from "./cmap-handshake";
+
+const cmapSessions = new Map<number, MissionState>(); // Keyed by conversationId
 
 export const portalChatRouter = router({
   getConversations: protectedProcedure.query(async ({ ctx }) => {
@@ -47,6 +55,16 @@ export const portalChatRouter = router({
 
       // Add user message
       await portalChat.addMessage(conversationId, ctx.user.id, "user", message);
+
+      // cMAP is additive session awareness for the active Portal conversation.
+      // State is intentionally in-memory until durable mission storage is added;
+      // unavailable state is never represented as fabricated telemetry.
+      let missionState = cmapSessions.get(conversationId);
+      if (!missionState) {
+        missionState = await initializecMAPSession(ctx.user.id);
+      }
+      missionState = processcMAPMessage(message, missionState).missionState;
+      cmapSessions.set(conversationId, missionState);
 
       // Get user's creation date for context
       const db = await getDb();
@@ -105,6 +123,13 @@ export const portalChatRouter = router({
       // Check for stage transitions
       const stageTransition = detectStageTransition(adaptiveResponse.response, userContext);
 
+      const livingContext = extractLivingContext(adaptiveResponse.response, missionState);
+      missionState = updateMissionState(missionState, {
+        ...livingContext,
+        nextAction: adaptiveResponse.metadata.nextSuggestedAction || missionState.nextAction,
+      });
+      cmapSessions.set(conversationId, missionState);
+
       return {
         portalResponse: adaptiveResponse.response,
         metadata: {
@@ -114,9 +139,22 @@ export const portalChatRouter = router({
           resistanceLevel: userContext.synthesis.resistanceLevel,
           stageTransition: stageTransition.isTransitioning ? stageTransition.nextStage : null,
           nextAction: adaptiveResponse.metadata.nextSuggestedAction,
+<<<<<<< HEAD
           provider: adaptiveResponse.metadata.provider,
           modelId: adaptiveResponse.metadata.modelId,
           latencyMs,
+=======
+          cmap: {
+            sessionId: missionState.sessionId,
+            handshakeComplete: true,
+            missionIntent: missionState.missionIntent,
+            missionStatus: missionState.missionStatus,
+            decisions: missionState.decisions,
+            evidence: missionState.evidence,
+            openQuestions: missionState.openQuestions,
+            nextAction: missionState.nextAction,
+          },
+>>>>>>> user_github/main
         },
       };
     }),

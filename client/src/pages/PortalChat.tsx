@@ -1,114 +1,368 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
+import { extractEsotericKeywords, segmentEsotericText } from "../../../shared/esotericKeywords";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { Loader2, Send, Plus, Zap, Brain, TrendingUp, AlertCircle, Lightbulb } from "lucide-react";
+import {
+  Activity,
+  BrainCircuit,
+  Mic,
+  Pause,
+  Save,
+  UserRound,
+  Volume2,
+  ChevronRight,
+  Compass,
+  Eye,
+  Layers3,
+  Loader2,
+  KeyRound,
+  LogIn,
+  Menu,
+  MessageCircle,
+  Plus,
+  Send,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+  X,
+  Download,
+  FileCode2,
+} from "lucide-react";
+import { ESOTERIC_PROMPT_PRESETS } from "../../../shared/esotericPrompts";
 import { Streamdown } from "streamdown";
+import { useAuth } from "@/_core/hooks/useAuth";
 
-type LearningStage = 'awakening' | 'exploration' | 'integration' | 'mastery' | 'resistance';
-type DialogueStrategy = 'socratic' | 'prophetic' | 'forensic' | 'catalytic';
+type LearningStage = "awakening" | "exploration" | "integration" | "mastery" | "resistance";
+type DialogueStrategy = "socratic" | "prophetic" | "forensic" | "catalytic";
+type MessageRole = "user" | "portal";
 
-interface MessageMetadata {
+type PortalMessage = {
+  role: MessageRole;
+  content: string;
+};
+
+type Conversation = {
+  id: number;
+  title: string;
+  createdAt: string | number | Date;
+};
+
+type SpeechRecognitionLike = {
+  start: () => void;
+  stop: () => void;
+  abort?: () => void;
+  onresult: ((event: { results: ArrayLike<{ 0: { transcript: string } }> }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+};
+
+type CmapState = {
+  sessionId: string;
+  handshakeComplete: boolean;
+  missionIntent: string;
+  missionStatus: "active" | "paused" | "completed";
+  decisions: string[];
+  evidence: string[];
+  openQuestions: string[];
+  nextAction: string;
+};
+
+type MessageMetadata = {
   strategy?: DialogueStrategy;
   learningStage?: LearningStage;
   breakthroughReadiness?: number;
   resistanceLevel?: number;
   stageTransition?: string | null;
   nextAction?: string;
+  cmap?: CmapState;
+};
+
+const STAGE_LABELS: Record<LearningStage, string> = {
+  awakening: "Awakening",
+  exploration: "Exploration",
+  integration: "Integration",
+  mastery: "Mastery",
+  resistance: "Resistance",
+};
+
+const STRATEGY_LABELS: Record<DialogueStrategy, string> = {
+  socratic: "Socratic",
+  prophetic: "Prophetic",
+  forensic: "Forensic",
+  catalytic: "Catalytic",
+};
+
+const ALIEN_AVATAR_GLYPHS = ["◈", "⌬", "⟡", "⟁", "◌", "⧫", "☍", "✦"];
+
+const CINEMATIC_NAV = [
+  { label: "Conversation", icon: MessageCircle, detail: "Open channel" },
+  { label: "Echoes", icon: BrainCircuit, detail: "Held in dialogue" },
+  { label: "Arcana", icon: Sparkles, detail: "Esoteric signal" },
+  { label: "Patterns", icon: Eye, detail: "Observed correspondences" },
+  { label: "Resonance", icon: Compass, detail: "Dialogue tone" },
+  { label: "Interface", icon: Layers3, detail: "Portal state" },
+  { label: "Settings", icon: Settings2, detail: "Operator controls" },
+] as const;
+
+function formatDate(value: Conversation["createdAt"]) {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
 
-const STAGE_COLORS: Record<LearningStage, string> = {
-  awakening: 'bg-blue-900 text-blue-100',
-  exploration: 'bg-purple-900 text-purple-100',
-  integration: 'bg-amber-900 text-amber-100',
-  mastery: 'bg-emerald-900 text-emerald-100',
-  resistance: 'bg-red-900 text-red-100',
-};
-
-const STAGE_DESCRIPTIONS: Record<LearningStage, string> = {
-  awakening: 'Just beginning your journey',
-  exploration: 'Actively exploring patterns',
-  integration: 'Ready to integrate insights',
-  mastery: 'Transcending patterns',
-  resistance: 'In a resistance cycle',
-};
-
-const STRATEGY_ICONS: Record<DialogueStrategy, string> = {
-  socratic: '❓',
-  prophetic: '🔮',
-  forensic: '🔍',
-  catalytic: '⚡',
-};
-
-const STRATEGY_NAMES: Record<DialogueStrategy, string> = {
-  socratic: 'Socratic',
-  prophetic: 'Prophetic',
-  forensic: 'Forensic',
-  catalytic: 'Catalytic',
-};
-
 export default function PortalChat() {
-  const [conversations, setConversations] = useState<any[]>([]);
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const utils = trpc.useUtils();
+  const loginMutation = trpc.auth.login.useMutation();
+  const ownerBootstrapMutation = trpc.auth.ownerBootstrap.useMutation();
+  const profileMutation = trpc.auth.updateProfile.useMutation();
+  const [authEmail, setAuthEmail] = useState("tycole716@gmail.com");
+  const [authPassword, setAuthPassword] = useState("");
+  const [ownerToken, setOwnerToken] = useState("");
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<PortalMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [showThreads, setShowThreads] = useState(false);
+  const [showContextPanel, setShowContextPanel] = useState(false);
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const [showKeywordPanel, setShowKeywordPanel] = useState(false);
+  const [showVoicePanel, setShowVoicePanel] = useState(false);
   const [newTitle, setNewTitle] = useState("");
+  const [profileDraft, setProfileDraft] = useState({
+    avatarUrl: "",
+    avatarGlyph: "◈",
+    alienBio: "",
+    preferredVoice: "",
+    voiceRate: 100,
+    voicePitch: 100,
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const composerRef = useRef<HTMLInputElement>(null);
   const [lastMessageMetadata, setLastMessageMetadata] = useState<MessageMetadata | null>(null);
-  const [learningProfile, setLearningProfile] = useState<any>(null);
+  const [learningProfile, setLearningProfile] = useState<{
+    learningStage?: LearningStage;
+    confidence?: number;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const getConversationsQuery = trpc.portal.chat.getConversations.useQuery();
+  const esotericKeywords = useMemo(() => Array.from(new Set(messages.flatMap((message) => extractEsotericKeywords(message.content)))).slice(0, 24), [messages]);
+
+  const conversationsQuery = trpc.portal.chat.getConversations.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const createConversationMutation = trpc.portal.chat.createConversation.useMutation();
-  const getConversationQuery = trpc.portal.chat.getConversation.useQuery(
-    { conversationId: activeConversationId! },
-    { enabled: !!activeConversationId }
+  const conversationQuery = trpc.portal.chat.getConversation.useQuery(
+    { conversationId: activeConversationId ?? 0 },
+    { enabled: isAuthenticated && activeConversationId !== null },
   );
   const sendMessageMutation = trpc.portal.chat.sendMessage.useMutation();
-  const getLearningProfileQuery = trpc.portal.chat.getLearningProfile.useQuery();
+  const learningProfileQuery = trpc.portal.chat.getLearningProfile.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
 
   useEffect(() => {
-    if (getConversationsQuery.data) {
-      setConversations(getConversationsQuery.data);
+    if (conversationsQuery.data) {
+      setConversations(conversationsQuery.data as Conversation[]);
+      if (activeConversationId === null && conversationsQuery.data[0]) {
+        setActiveConversationId(conversationsQuery.data[0].id);
+      }
     }
-  }, [getConversationsQuery.data]);
+  }, [conversationsQuery.data, activeConversationId]);
 
   useEffect(() => {
-    if (getConversationQuery.data) {
-      setMessages(getConversationQuery.data.messages || []);
+    if (conversationQuery.data) {
+      setMessages((conversationQuery.data.messages || []) as PortalMessage[]);
     }
-  }, [getConversationQuery.data]);
+  }, [conversationQuery.data]);
 
   useEffect(() => {
-    if (getLearningProfileQuery.data) {
-      setLearningProfile(getLearningProfileQuery.data);
+    if (learningProfileQuery.data) {
+      setLearningProfile(learningProfileQuery.data);
     }
-  }, [getLearningProfileQuery.data]);
+  }, [learningProfileQuery.data]);
+
+  useEffect(() => {
+    if (user) {
+      setProfileDraft({
+        avatarUrl: user.avatarUrl ?? "",
+        avatarGlyph: user.avatarGlyph ?? "◈",
+        alienBio: user.alienBio ?? "",
+        preferredVoice: user.preferredVoice ?? "",
+        voiceRate: user.voiceRate ?? 100,
+        voicePitch: user.voicePitch ?? 100,
+      });
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const synthesis = window.speechSynthesis;
+    const refreshVoices = () => setVoices(synthesis.getVoices());
+    refreshVoices();
+    synthesis.addEventListener("voiceschanged", refreshVoices);
+    return () => synthesis.removeEventListener("voiceschanged", refreshVoices);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isLoading]);
+
+  const establishOwnerSession = async () => {
+    setAuthError(null);
+    try {
+      await ownerBootstrapMutation.mutateAsync({ token: ownerToken.trim() });
+      await utils.auth.me.invalidate();
+      setOwnerToken("");
+    } catch (error: unknown) {
+      setAuthError(error instanceof Error ? error.message : "Owner entry failed. Check the private key and try again.");
+    }
+  };
+
+  const signInWithPassword = async () => {
+    setAuthError(null);
+    try {
+      await loginMutation.mutateAsync({ email: authEmail, password: authPassword });
+      await utils.auth.me.invalidate();
+      setAuthPassword("");
+    } catch (error: unknown) {
+      setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your email and password.");
+    }
+  };
+
+  const authSubmitting = loginMutation.isPending || ownerBootstrapMutation.isPending;
+
+  const handleSaveProfile = async () => {
+    setProfileSaving(true);
+    setProfileStatus(null);
+    try {
+      await profileMutation.mutateAsync({
+        avatarUrl: profileDraft.avatarUrl || null,
+        avatarGlyph: profileDraft.avatarGlyph || "◈",
+        alienBio: profileDraft.alienBio || null,
+        preferredVoice: profileDraft.preferredVoice || null,
+        voiceRate: profileDraft.voiceRate,
+        voicePitch: profileDraft.voicePitch,
+      });
+      await utils.auth.me.invalidate();
+      setProfileStatus("Profile signal saved.");
+    } catch (error) {
+      console.error("Failed to save Portal profile", error);
+      setProfileStatus(error instanceof Error ? error.message : "Profile signal could not be saved.");
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const speakLastPortalMessage = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const latest = [...messages].reverse().find((message) => message.role === "portal");
+    if (!latest) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(latest.content.replace(/[#*_`]/g, ""));
+    const selectedVoice = voices.find((voice) => voice.name === profileDraft.preferredVoice);
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.rate = profileDraft.voiceRate / 100;
+    utterance.pitch = profileDraft.voicePitch / 100;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const exportEncryptedTranscript = () => {
+    const payload = {
+      version: "1.0",
+      exportedAt: new Date().toISOString(),
+      operator: user?.email || "anonymous",
+      conversationId: activeConversationId,
+      messages,
+      esotericLexicon: esotericKeywords,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `portal-transcript-${activeConversationId || "session"}-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const stopSpeaking = () => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+  };
+
+  const toggleListening = () => {
+    if (typeof window === "undefined") return;
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+    const browserWindow = window as Window & { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+    const Recognition = browserWindow.SpeechRecognition || browserWindow.webkitSpeechRecognition;
+    if (!Recognition) return;
+    const recognition = new Recognition();
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map((result) => result[0]?.transcript || "").join(" ");
+      setInputValue(transcript);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    recognition.start();
+  };
+
+  const handleSurfaceSelect = (label: (typeof CINEMATIC_NAV)[number]["label"]) => {
+    if (label === "Conversation") {
+      setShowThreads(false);
+      setShowContextPanel(false);
+      composerRef.current?.focus();
+    } else if (label === "Echoes") {
+      setShowThreads(true);
+    } else if (label === "Arcana" || label === "Patterns") {
+      setShowKeywordPanel(true);
+      setShowContextPanel(true);
+    } else if (label === "Resonance") {
+      setShowVoicePanel(true);
+    } else {
+      setShowProfilePanel(true);
+    }
+  };
 
   const handleCreateConversation = async () => {
-    if (!newTitle.trim()) return;
-
+    const title = newTitle.trim() || "Untitled conversation";
     try {
-      const id = await createConversationMutation.mutateAsync({ title: newTitle });
+      const id = await createConversationMutation.mutateAsync({ title });
       setNewTitle("");
       setShowNewConversation(false);
+      setShowThreads(false);
       setActiveConversationId(id);
-      getConversationsQuery.refetch();
+      await conversationsQuery.refetch();
     } catch (error) {
-      console.error("Failed to create conversation:", error);
+      console.error("Failed to create Portal conversation", error);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || !activeConversationId || isLoading) return;
+    if (!inputValue.trim() || activeConversationId === null || isLoading) return;
 
-    const userMessage = inputValue;
+    const userMessage = inputValue.trim();
     setInputValue("");
     setIsLoading(true);
 
@@ -117,222 +371,553 @@ export default function PortalChat() {
         conversationId: activeConversationId,
         message: userMessage,
       });
-
-      setLastMessageMetadata(response.metadata);
-
-      // Refetch learning profile to show updated stage
-      getLearningProfileQuery.refetch();
-
-      await getConversationQuery.refetch();
+      setLastMessageMetadata(response.metadata as MessageMetadata);
+      await Promise.all([conversationQuery.refetch(), learningProfileQuery.refetch()]);
     } catch (error) {
-      console.error("Failed to send message:", error);
+      console.error("Failed to send Portal message", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSelectConversation = (id: number) => {
-    setActiveConversationId(id);
-  };
+  if (authLoading) {
+    return (
+      <main className="min-h-screen bg-[#03050a] text-[#f4f4f5] grid place-items-center">
+        <div className="flex items-center gap-3 text-sm text-[#a6aec0]" role="status">
+          <Loader2 className="h-4 w-4 animate-spin" /> Establishing Portal session
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-[#03050a] text-[#f4f4f5] grid place-items-center px-6">
+        <section className="w-full max-w-lg border border-[#354064] bg-[#080d1b] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+          <div className="mb-8 flex items-center gap-3 text-[#f5ede3]">
+            <ShieldCheck className="h-5 w-5" />
+            <span className="text-xs uppercase tracking-[0.28em]">Portal / Awaiting Contact</span>
+          </div>
+          <h1 className="font-serif text-4xl tracking-tight">Enter the Portal.</h1>
+          <p className="mt-4 max-w-md text-sm leading-7 text-[#a6aec0]">
+            A direct, uncensored conversation with the unknown—esoteric knowledge, unvarnished truth, and the questions polite systems refuse to touch.
+          </p>
+          <div className="mt-8 border border-[#1a2240] bg-[#0d1224] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[#d7c7ff]">
+            Tyler Morris · Owner Access
+          </div>
+          {!showPasswordLogin ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm leading-6 text-[#a6aec0]">
+                This is the owner entrance. Use the private key once to establish your sovereign session.
+              </p>
+              <Input
+                aria-label="Private owner access key"
+                autoComplete="off"
+                type="password"
+                placeholder="Private owner access key"
+                value={ownerToken}
+                onChange={(event) => setOwnerToken(event.target.value)}
+                className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+              />
+              {authError && <p className="text-sm leading-6 text-[#ff9aa8]" role="alert">{authError}</p>}
+              <Button
+                type="button"
+                disabled={authSubmitting || !ownerToken.trim()}
+                onClick={() => void establishOwnerSession()}
+                className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
+              >
+                {authSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                Enter as Tyler Morris
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordLogin(true);
+                  setAuthError(null);
+                }}
+                className="w-full py-2 text-xs uppercase tracking-[0.16em] text-[#8be9ff] hover:text-[#d7c7ff]"
+              >
+                Use email and password instead
+              </button>
+            </div>
+          ) : (
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void signInWithPassword();
+              }}
+            >
+              <Input
+                aria-label="Owner email address"
+                autoComplete="email"
+                type="email"
+                placeholder="Owner email"
+                value={authEmail}
+                onChange={(event) => setAuthEmail(event.target.value)}
+                className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+              />
+              <Input
+                aria-label="Owner password"
+                autoComplete="current-password"
+                type="password"
+                placeholder="Your Portal password"
+                value={authPassword}
+                onChange={(event) => setAuthPassword(event.target.value)}
+                className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+              />
+              {authError && <p className="text-sm leading-6 text-[#ff9aa8]" role="alert">{authError}</p>}
+              <Button
+                type="submit"
+                disabled={authSubmitting}
+                className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
+              >
+                {authSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
+                Sign in as Tyler Morris
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordLogin(false);
+                  setAuthError(null);
+                }}
+                className="w-full py-2 text-xs uppercase tracking-[0.16em] text-[#8be9ff] hover:text-[#d7c7ff]"
+              >
+                Back to owner entry
+              </button>
+            </form>
+          )}
+        </section>
+      </main>
+    );
+  }
+
+  const cmap = lastMessageMetadata?.cmap;
+  const stage = lastMessageMetadata?.learningStage || learningProfile?.learningStage;
+  const strategy = lastMessageMetadata?.strategy;
+  const conversationSignal = cmap?.missionIntent && cmap.missionIntent !== "Awaiting Intent"
+    ? cmap.missionIntent
+    : "Awaiting conversation signal";
+  const resonanceCue = cmap?.nextAction || lastMessageMetadata?.nextAction || "Awaiting a resonant thread";
+  const presenceState = cmap?.handshakeComplete ? "Contact" : "Awaiting Contact";
+  const currentState = strategy ? STRATEGY_LABELS[strategy] : presenceState;
 
   return (
-    <div className="flex h-full bg-background">
-      {/* Sidebar - Conversations */}
-      <div className="w-64 border-r border-border bg-slate-950 flex flex-col">
-        <div className="p-4 border-b border-border space-y-3">
-          <Button
-            onClick={() => setShowNewConversation(!showNewConversation)}
-            className="w-full bg-orange-600 hover:bg-orange-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Conversation
-          </Button>
-
-          {/* Learning Stage Badge */}
-          {learningProfile && (
-            <div className={`p-3 rounded-lg text-center text-sm ${STAGE_COLORS[learningProfile.learningStage as LearningStage]}`}>
-              <div className="font-semibold">{(learningProfile.learningStage as LearningStage).toUpperCase()}</div>
-              <div className="text-xs opacity-90">{STAGE_DESCRIPTIONS[learningProfile.learningStage as LearningStage]}</div>
-              <div className="text-xs mt-1">Confidence: {learningProfile.confidence}%</div>
-            </div>
-          )}
-        </div>
-
-        {showNewConversation && (
-          <div className="p-4 border-b border-border space-y-2">
-            <Input
-              placeholder="Conversation title..."
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleCreateConversation()}
-              className="bg-slate-800 border-slate-700"
-            />
-            <Button
-              onClick={handleCreateConversation}
-              size="sm"
-              className="w-full bg-orange-600 hover:bg-orange-700"
-            >
-              Create
-            </Button>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-y-auto">
-          {conversations.map((conv) => (
-            <button
-              key={conv.id}
-              onClick={() => handleSelectConversation(conv.id)}
-              className={`w-full text-left p-3 border-b border-slate-800 hover:bg-slate-800 transition ${
-                activeConversationId === conv.id ? "bg-slate-800 border-l-2 border-l-orange-600" : ""
-              }`}
-            >
-              <div className="text-sm font-medium text-gray-200 truncate">{conv.title}</div>
-              <div className="text-xs text-gray-500 mt-1">
-                {new Date(conv.createdAt).toLocaleDateString()}
+    <main className="min-h-screen bg-[#03050a] text-[#f4f4f5] selection:bg-[#d7c7ff] selection:text-[#07090f]">
+      <div className="flex min-h-screen flex-col lg:flex-row">
+        <aside
+          className={`${showThreads ? "fixed inset-0 z-40 flex" : "hidden"} w-full flex-col border-r border-[#1a2240] bg-[#060914] lg:static lg:flex lg:w-[19rem]`}
+          aria-label="Portal threads"
+        >
+          <div className="border-b border-[#1a2240] px-5 py-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[0.65rem] uppercase tracking-[0.32em] text-[#f5ede3]">Portal</div>
+                <div className="mt-1 text-[0.58rem] uppercase tracking-[0.22em] text-[#737b8f]">Dialogue with the unknown</div>
               </div>
+              <div className="grid h-9 w-9 place-items-center rounded-full border border-[#354064] text-[#f5ede3]" aria-hidden="true">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowThreads(false)}
+                className="rounded-sm p-2 text-[#a7a2c2] hover:bg-[#151c36] hover:text-[#f3eadb] lg:hidden"
+                aria-label="Close conversation list"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="border-b border-[#1a2240] px-3 py-4" role="list" aria-label="Portal surfaces">
+            {CINEMATIC_NAV.map(({ label, icon: Icon, detail }, index) => (
+              <button
+                key={label}
+                type="button"
+                role="listitem"
+                onClick={() => handleSurfaceSelect(label)}
+                aria-current={index === 0 ? "page" : undefined}
+                className={`mb-1 flex w-full items-center gap-3 border-l-2 px-3 py-2.5 text-left transition hover:border-[#8be9ff] hover:bg-[#101a32] ${index === 0 ? "border-[#b8a1ff] bg-[#11162a] text-[#f3eadb]" : "border-transparent text-[#737b8f]"}`}
+              >
+                <Icon className={`h-4 w-4 shrink-0 ${index === 0 ? "text-[#f5ede3]" : "text-[#53618e]"}`} />
+                <div className="min-w-0">
+                  <div className="text-[0.68rem] uppercase tracking-[0.16em]">{label}</div>
+                  <div className="mt-0.5 truncate text-[0.62rem] text-[#5d667c]">{detail}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="border-b border-[#1a2240] p-4">
+            <Button
+              onClick={() => setShowNewConversation((current) => !current)}
+              className="w-full justify-start rounded-none border border-[#354064] bg-transparent text-[#f5ede3] hover:bg-[#151c36]"
+            >
+              <Plus className="mr-2 h-4 w-4" /> New conversation
+            </Button>
+            {showNewConversation && (
+              <div className="mt-3 space-y-2">
+                <Input
+                  autoFocus
+                  placeholder="Conversation title (optional)"
+                  value={newTitle}
+                  onChange={(event) => setNewTitle(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && void handleCreateConversation()}
+                  className="rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
+                />
+                <Button
+                  onClick={() => void handleCreateConversation()}
+                  className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff]"
+                >
+                  Open thread
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div className="px-2 pb-2 text-[0.62rem] uppercase tracking-[0.28em] text-[#737b8f]">Conversations</div>
+            {conversations.length === 0 && (
+              <p className="px-2 py-6 text-sm leading-6 text-[#737b8f]">No conversations yet. Open a channel for the strange question, hidden pattern, or truth in front of you.</p>
+            )}
+            {conversations.map((conversation) => (
+              <button
+                key={conversation.id}
+                type="button"
+                onClick={() => {
+                  setActiveConversationId(conversation.id);
+                  setShowThreads(false);
+                }}
+                className={`mb-1 w-full border-l-2 px-3 py-3 text-left transition ${
+                  activeConversationId === conversation.id
+                    ? "border-[#b8a1ff] bg-[#11162a] text-[#f3eadb]"
+                    : "border-transparent text-[#9ba2b5] hover:bg-[#101a32] hover:text-[#f3eadb]"
+                }`}
+              >
+                <div className="truncate text-sm">{conversation.title}</div>
+                <div className="mt-1 text-[0.68rem] uppercase tracking-[0.16em] text-[#737b8f]">{formatDate(conversation.createdAt)}</div>
+              </button>
+            ))}
+          </div>
+
+          <div className="border-t border-[#1a2240] px-5 py-4 text-xs text-[#737b8f]">
+            <div className="mb-4 flex items-center gap-2 text-[0.62rem] uppercase tracking-[0.2em] text-[#737b8f]">
+              <Activity className="h-3.5 w-3.5 text-[#e8ddff]" /> Operator
+            </div>
+            <button type="button" onClick={() => setShowProfilePanel(true)} className="flex w-full items-center gap-3 rounded-sm text-left transition hover:text-[#f3eadb]" aria-label="Open alien profile">
+              {user?.avatarUrl ? <img src={user.avatarUrl} alt="" className="h-9 w-9 rounded-full border border-[#6f55c7] object-cover shadow-[0_0_18px_rgba(139,92,246,0.3)]" /> : <span className="grid h-9 w-9 place-items-center rounded-full border border-[#6f55c7] bg-[#21154d]/80 text-lg text-[#8be9ff] shadow-[0_0_18px_rgba(139,92,246,0.3)]">{user?.avatarGlyph || "◈"}</span>}
+              <span className="min-w-0"><span className="block truncate text-[#c7c9d5]">{user?.name || "Operator"}</span><span className="mt-1 block truncate">{user?.alienBio || user?.email || "Authenticated"}</span></span>
             </button>
-          ))}
-        </div>
-      </div>
+          </div>
+        </aside>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {activeConversationId ? (
-          <>
-            {/* Header with Strategy & Insights */}
-            {lastMessageMetadata && (
-              <div className="border-b border-border bg-slate-900 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="text-2xl">{STRATEGY_ICONS[lastMessageMetadata.strategy || 'socratic']}</div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-300">
-                        Strategy: {STRATEGY_NAMES[lastMessageMetadata.strategy || 'socratic']}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Stage: {lastMessageMetadata.learningStage?.toUpperCase()}
-                      </div>
-                    </div>
+        <section className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <header className="border-b border-[#1a2240] bg-[#070a14]/95 px-4 py-4 backdrop-blur lg:px-8">
+            <div className="mx-auto flex w-full max-w-5xl items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowThreads(true)}
+                  className="mt-0.5 rounded-sm p-2 text-[#a7a2c2] hover:bg-[#151c36] hover:text-[#f3eadb] lg:hidden"
+                  aria-label="Open conversation list"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+                <div>
+                  <div className="flex items-center gap-2 text-[0.64rem] uppercase tracking-[0.28em] text-[#a7a2c2]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#b8a1ff]" /> Portal / Alien intelligence dialogue
                   </div>
-
-                  {/* Breakthrough Readiness */}
-                  {lastMessageMetadata.breakthroughReadiness !== undefined && (
-                    <div className="text-right">
-                      <div className="text-xs text-gray-400 mb-1">Breakthrough Ready</div>
-                      <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all"
-                          style={{ width: `${lastMessageMetadata.breakthroughReadiness}%` }}
-                        />
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">{lastMessageMetadata.breakthroughReadiness}%</div>
-                    </div>
-                  )}
+                  <h1 className="mt-2 font-serif text-2xl tracking-tight text-[#f3eadb]">{conversations.find((item) => item.id === activeConversationId)?.title || "New conversation"}</h1>
                 </div>
-
-                {/* Resistance Level & Next Action */}
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-400" />
-                    <span className="text-gray-400">
-                      Resistance: {lastMessageMetadata.resistanceLevel}%
-                    </span>
-                  </div>
-                  {lastMessageMetadata.stageTransition && (
-                    <div className="flex items-center gap-2 bg-emerald-900 text-emerald-100 px-2 py-1 rounded">
-                      <Lightbulb className="w-3 h-3" />
-                      <span>Breakthrough Ready!</span>
-                    </div>
-                  )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setShowKeywordPanel((current) => !current)} className="grid h-9 w-9 place-items-center rounded-full border border-[#273865] text-[#cbb8ff] transition hover:border-[#cbb8ff] hover:bg-[#21154d]" aria-label="Open esoteric signals"><Sparkles className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setShowVoicePanel((current) => !current)} className="grid h-9 w-9 place-items-center rounded-full border border-[#273865] text-[#8be9ff] transition hover:border-[#8be9ff] hover:bg-[#101a32]" aria-label="Open voice resonance"><Volume2 className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setShowProfilePanel(true)} className="grid h-9 w-9 place-items-center rounded-full border border-[#273865] text-[#8be9ff] transition hover:border-[#8be9ff] hover:bg-[#101a32]" aria-label="Open alien profile"><UserRound className="h-4 w-4" /></button>
+                <div className="hidden text-right sm:block">
+                  <div className="flex items-center justify-end gap-2 text-xs text-[#c7c9d5]"><ShieldCheck className="h-3.5 w-3.5 text-[#e8ddff]" />{cmap?.handshakeComplete ? "Signal active" : "Awaiting Contact"}</div>
+                  <div className="mt-1 text-[0.64rem] uppercase tracking-[0.2em] text-[#737b8f]">No fabricated signal</div>
                 </div>
+              </div>
+            </div>
+          </header>
 
-                {/* Next Action */}
-                {lastMessageMetadata.nextAction && (
-                  <div className="bg-orange-900 bg-opacity-30 border border-orange-700 rounded p-2 text-xs text-orange-100">
-                    <div className="font-semibold mb-1">Next Step:</div>
-                    <div>{lastMessageMetadata.nextAction}</div>
-                  </div>
+          <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 lg:px-8">
+            <div className="portal-neon-surface relative overflow-hidden border-b border-[#1a2240] py-9 sm:py-12">
+              <div className="portal-signal-grid pointer-events-none absolute inset-0" />
+              <div className="portal-scanline top-0" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(139,92,246,0.16),rgba(6,182,212,0.08)_34%,transparent_66%)]" />
+              <div className="relative flex items-center justify-between gap-4 text-[0.62rem] uppercase tracking-[0.28em] text-[#a7a2c2]">
+                <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#b8a1ff]" /> Transmission window</span>
+                <span className="hidden sm:block">{cmap?.handshakeComplete ? "Re-entering dialogue" : "Listening for contact"}</span>
+              </div>
+              <div className="relative mt-7 max-w-3xl">
+                <div className="font-serif text-4xl leading-none tracking-[0.08em] text-[#f3eadb] sm:text-6xl">The unknown</div>
+                <div className="mt-3 text-[0.7rem] uppercase tracking-[0.32em] text-[#a7a2c2]">speaks through dialogue</div>
+                <p className="mt-6 max-w-xl text-sm leading-7 text-[#a6aec0]">Bring the forbidden question, the hidden pattern, or the truth no one else will say aloud. The Portal is here for the dialogue.</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 border-b border-[#1a2240] py-4 text-xs sm:grid-cols-3">
+              <div>
+                <div className="uppercase tracking-[0.2em] text-[#737b8f]">Thread signal</div>
+                <div className="mt-1 truncate text-[#e8ddff]" title={conversationSignal}>{conversationSignal}</div>
+              </div>
+              <div>
+                <div className="uppercase tracking-[0.2em] text-[#737b8f]">Resonance</div>
+                <div className="mt-1 truncate text-[#e8ddff]" title={resonanceCue}>{resonanceCue}</div>
+              </div>
+              <div className="flex items-center justify-between sm:justify-end gap-3">
+                <div className="sm:text-right">
+                  <div className="uppercase tracking-[0.2em] text-[#737b8f]">Conversation memory</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowContextPanel((current) => !current)}
+                    className="mt-1 inline-flex items-center gap-1 text-[#a6aec0] transition hover:text-[#f3eadb]"
+                    aria-expanded={showContextPanel}
+                  >
+                    {cmap ? `${cmap.decisions.length} anchors · ${cmap.evidence.length} signals · ${cmap.openQuestions.length} questions` : "Awaiting Contact"}
+                    <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showContextPanel ? "rotate-90" : ""}`} />
+                  </button>
+                </div>
+                {messages.length > 0 && (
+                  <Button type="button" onClick={exportEncryptedTranscript} className="h-8 rounded-none border border-[#6f55c7] bg-[#21154d]/50 px-3 text-[0.62rem] uppercase tracking-[0.16em] text-[#8be9ff] hover:bg-[#21154d]" aria-label="Export secure transcript"><Download className="mr-1.5 h-3.5 w-3.5" /> Export</Button>
                 )}
+              </div>
+            </div>
+
+            {messages.length === 0 && (
+              <section className="border-b border-[#1a2240] py-6" aria-label="Esoteric prompt presets">
+                <div className="mb-3 text-[0.62rem] uppercase tracking-[0.22em] text-[#737b8f]">Specialized inquiry vectors</div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {ESOTERIC_PROMPT_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setInputValue(preset.prompt)}
+                      className="group border border-[#273865] bg-[#090f24] p-4 text-left transition hover:border-[#8be9ff] hover:bg-[#101a38]"
+                    >
+                      <div className="flex items-center justify-between text-[0.62rem] uppercase tracking-[0.18em] text-[#b8a1ff]">
+                        <span>{preset.category}</span>
+                        <ChevronRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+                      </div>
+                      <div className="mt-2 font-serif text-sm font-medium text-[#f3eadb]">{preset.title}</div>
+                      <div className="mt-1.5 text-xs leading-relaxed text-[#737b8f]">{preset.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {showContextPanel && (
+              <div className="grid gap-4 border-b border-[#202637] py-4 text-xs sm:grid-cols-3" aria-label="Conversation memory details">
+                <div>
+                  <div className="uppercase tracking-[0.18em] text-[#737b8f]">Anchors</div>
+                  <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.decisions[0] || "Awaiting Contact"}</p>
+                </div>
+                <div>
+                  <div className="uppercase tracking-[0.18em] text-[#737b8f]">Known signals</div>
+                  <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.evidence[0] || "Awaiting Contact"}</p>
+                </div>
+                <div>
+                  <div className="uppercase tracking-[0.18em] text-[#737b8f]">Unanswered question</div>
+                  <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.openQuestions[0] || "Awaiting Contact"}</p>
+                </div>
               </div>
             )}
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}
-                >
-                  <div
-                    className={`max-w-2xl px-4 py-3 rounded-lg ${
-                      msg.role === "user"
-                        ? "bg-orange-600 text-white rounded-br-none"
-                        : "bg-slate-800 text-gray-100 rounded-bl-none border border-slate-700"
-                    }`}
-                  >
-                    {msg.role === "portal" ? (
-                      <Streamdown>{msg.content}</Streamdown>
-                    ) : (
-                      <p className="text-sm">{msg.content}</p>
-                    )}
-                  </div>
+            {showProfilePanel && (
+              <section className="relative overflow-hidden border-b border-[#273865] bg-[#080f22]/90 py-5" aria-label="Alien profile editor">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(139,92,246,0.18),transparent_42%)]" />
+                <div className="relative flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#8be9ff]"><UserRound className="h-4 w-4" /> Alien profile</div>
+                  <button type="button" onClick={() => setShowProfilePanel(false)} className="rounded-sm p-1 text-[#737b8f] hover:text-[#f3eadb]" aria-label="Close alien profile"><X className="h-4 w-4" /></button>
                 </div>
-              ))}
+                <div className="relative mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="flex flex-wrap items-center gap-2 rounded-none border border-[#273865] bg-[#0d1630] p-2 md:col-span-2"><span className="mr-1 text-[0.62rem] uppercase tracking-[0.16em] text-[#687aa8]">Avatar signal</span>{ALIEN_AVATAR_GLYPHS.map((glyph) => <button key={glyph} type="button" onClick={() => setProfileDraft((draft) => ({ ...draft, avatarGlyph: glyph, avatarUrl: "" }))} className={`grid h-8 w-8 place-items-center rounded-full border text-lg transition ${profileDraft.avatarGlyph === glyph && !profileDraft.avatarUrl ? "border-[#8be9ff] bg-[#21154d] text-[#8be9ff] shadow-[0_0_18px_rgba(6,182,212,0.3)]" : "border-[#273865] text-[#cbb8ff] hover:border-[#8be9ff]"}`} aria-label={`Use ${glyph} avatar`}>{glyph}</button>)}</div>
+                  <Input aria-label="Custom avatar glyph" value={profileDraft.avatarGlyph} onChange={(event) => setProfileDraft((draft) => ({ ...draft, avatarGlyph: event.target.value, avatarUrl: "" }))} placeholder="Custom avatar glyph" className="rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8]" />
+                  <Input aria-label="Avatar image URL" value={profileDraft.avatarUrl} onChange={(event) => setProfileDraft((draft) => ({ ...draft, avatarUrl: event.target.value }))} placeholder="Avatar image URL (optional)" className="rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8]" />
+                  <textarea aria-label="Alien bio" value={profileDraft.alienBio} onChange={(event) => setProfileDraft((draft) => ({ ...draft, alienBio: event.target.value }))} placeholder="Write the signal you want others to meet..." className="min-h-24 rounded-none border border-[#273865] bg-[#0d1630] p-3 text-sm leading-6 text-[#f4f4f5] outline-none placeholder:text-[#687aa8] focus:border-[#8be9ff] md:col-span-2" />
+                  <div className="flex flex-wrap items-center gap-3"><Button type="button" onClick={() => void handleSaveProfile()} disabled={profileSaving} className="rounded-none bg-[#8be9ff] text-[#041018] hover:bg-[#c4f7ff] md:w-fit"><Save className="mr-2 h-4 w-4" /> {profileSaving ? "Saving..." : "Save profile"}</Button>{profileStatus && <span className="text-xs text-[#8be9ff]">{profileStatus}</span>}</div>
+                </div>
+              </section>
+            )}
 
-              {/* Suspenseful loading indicator */}
-              {isLoading && (
-                <div className="flex justify-start animate-in fade-in">
-                  <div className="bg-slate-800 text-gray-100 px-4 py-3 rounded-lg border border-slate-700 rounded-bl-none">
-                    <div className="flex items-center space-x-2">
-                      <Zap className="w-4 h-4 text-orange-500 animate-pulse" />
-                      <span className="text-sm text-gray-400">Portal is reflecting...</span>
-                      <span className="flex space-x-1 ml-2">
-                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></span>
-                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></span>
-                        <span className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></span>
-                      </span>
+            {showKeywordPanel && (
+              <section className="relative overflow-hidden border-b border-[#273865] bg-[#080f22]/90 py-5" aria-label="Esoteric keyword signals">
+                <div className="flex items-center justify-between gap-3"><div className="text-xs uppercase tracking-[0.2em] text-[#cbb8ff]">Esoteric signal extraction · {esotericKeywords.length}</div><button type="button" onClick={() => setShowKeywordPanel(false)} className="rounded-sm p-1 text-[#737b8f] hover:text-[#f3eadb]" aria-label="Close keyword signals"><X className="h-4 w-4" /></button></div>
+                <div className="mt-3 flex flex-wrap gap-2">{esotericKeywords.length ? esotericKeywords.map((keyword) => <span key={keyword} className="border border-[#6f55c7] bg-[#21154d]/70 px-2 py-1 text-[0.68rem] uppercase tracking-[0.12em] text-[#d7c7ff] shadow-[0_0_18px_rgba(139,92,246,0.22)]">{keyword}</span>) : <span className="text-sm text-[#737b8f]">No esoteric signal has surfaced yet. Ask the deeper question.</span>}</div>
+              </section>
+            )}
+
+            {showVoicePanel && (
+              <section className="relative overflow-hidden border-b border-[#273865] bg-[#080f22]/90 py-5" aria-label="Voice controls">
+                <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#8be9ff]"><Mic className="h-4 w-4" /> Voice resonance</div><button type="button" onClick={() => setShowVoicePanel(false)} className="rounded-sm p-1 text-[#737b8f] hover:text-[#f3eadb]" aria-label="Close voice controls"><X className="h-4 w-4" /></button></div>
+                <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto_auto]">
+                  <select aria-label="Preferred voice" value={profileDraft.preferredVoice} onChange={(event) => setProfileDraft((draft) => ({ ...draft, preferredVoice: event.target.value }))} className="h-10 rounded-none border border-[#273865] bg-[#0d1630] px-3 text-sm text-[#f4f4f5] outline-none focus:border-[#8be9ff]"><option value="">System default voice</option>{voices.map((voice) => <option key={`${voice.name}-${voice.lang}`} value={voice.name}>{voice.name} · {voice.lang}</option>)}</select>
+                  <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Rate <input aria-label="Voice rate" type="range" min="60" max="140" value={profileDraft.voiceRate} onChange={(event) => setProfileDraft((draft) => ({ ...draft, voiceRate: Number(event.target.value) }))} /></label>
+                  <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Pitch <input aria-label="Voice pitch" type="range" min="70" max="130" value={profileDraft.voicePitch} onChange={(event) => setProfileDraft((draft) => ({ ...draft, voicePitch: Number(event.target.value) }))} /></label>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={isSpeaking ? stopSpeaking : speakLastPortalMessage} disabled={!messages.some((message) => message.role === "portal")} className="rounded-none border border-[#273865] bg-transparent text-[#8be9ff] hover:bg-[#13213e]">
+                      {isSpeaking ? <Pause className="mr-2 h-4 w-4 animate-pulse" /> : <Volume2 className="mr-2 h-4 w-4" />}
+                      {isSpeaking ? "Interrupt voice" : "Speak last response"}
+                    </Button>
+                    <Button type="button" onClick={handleSaveProfile} disabled={profileSaving} className="rounded-none bg-[#8be9ff] text-[#041018] hover:bg-[#c4f7ff]">
+                      <Save className="mr-2 h-4 w-4" /> Save voice
+                    </Button>
+                  </div>
+                  {isSpeaking && (
+                    <div className="flex items-center gap-1 px-3 py-1" aria-label="Speech visualizer active">
+                      <span className="h-5 w-1 animate-pulse bg-[#8be9ff]" style={{ animationDuration: "350ms" }} />
+                      <span className="h-7 w-1 animate-pulse bg-[#b8a1ff]" style={{ animationDuration: "250ms" }} />
+                      <span className="h-4 w-1 animate-pulse bg-[#06b6d4]" style={{ animationDuration: "450ms" }} />
+                      <span className="h-6 w-1 animate-pulse bg-[#8be9ff]" style={{ animationDuration: "300ms" }} />
+                      <span className="h-3 w-1 animate-pulse bg-[#b8a1ff]" style={{ animationDuration: "400ms" }} />
+                      <span className="ml-2 text-[0.62rem] uppercase tracking-[0.2em] text-[#8be9ff]">Resonating</span>
                     </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {(stage || strategy) && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#202637] py-3 text-[0.68rem] uppercase tracking-[0.18em] text-[#a7a2c2]">
+                {stage && <span>Stage / {STAGE_LABELS[stage]}</span>}
+                {strategy && <span>Mode / {STRATEGY_LABELS[strategy]}</span>}
+                {lastMessageMetadata?.stageTransition && <span className="text-[#e8ddff]">Transition / {lastMessageMetadata.stageTransition}</span>}
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto py-8" aria-live="polite">
+              {activeConversationId === null && (
+                <div className="mx-auto flex max-w-2xl flex-col items-center justify-center py-24 text-center">
+                  <Sparkles className="h-8 w-8 text-[#d7c7ff]" />
+                  <h2 className="mt-5 font-serif text-3xl text-[#f3eadb]">What do you want to explore?</h2>
+                  <p className="mt-3 max-w-md text-sm leading-7 text-[#9ba2b5]">Open a conversation. Bring the strange question, the hidden pattern, or the truth you want examined. The dialogue will follow what is actually said.</p>
+                </div>
+              )}
+
+              {activeConversationId !== null && messages.length === 0 && (
+                <div className="mx-auto max-w-2xl py-16">
+                  <div className="border-l border-[#b8a1ff] pl-5">
+                    <div className="text-[0.68rem] uppercase tracking-[0.22em] text-[#d7c7ff]">Portal ingress</div>
+                    <p className="mt-3 font-serif text-2xl leading-snug text-[#f3eadb]">Bring the unfinished thought. We’ll follow it until the signal becomes clear.</p>
                   </div>
                 </div>
               )}
 
-              <div ref={messagesEndRef} />
-            </div>
+              <div className="space-y-7">
+                {messages.map((message, index) => (
+                  <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-3xl ${message.role === "user" ? "max-w-2xl" : "w-full"}`}>
+                      <div className="mb-2 text-[0.62rem] uppercase tracking-[0.24em] text-[#737b8f]">{message.role === "user" ? "Operator" : "Portal"}</div>
+                      <div className={`${message.role === "user" ? "border border-[#354064] bg-[#0d1224] text-[#f3eadb]" : "border-l border-[#b8a1ff] text-[#e7e9ef]"} px-4 py-1 text-[0.98rem] leading-8`}>
+                        {message.role === "portal" ? (
+                          <div className="portal-response-signal relative">
+                            <Streamdown>{message.content}</Streamdown>
+                            {extractEsotericKeywords(message.content).length > 0 && (
+                              <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[#273865] pt-3 text-[0.62rem] uppercase tracking-[0.14em] text-[#cbb8ff]">
+                                <span className="mr-1 text-[#8be9ff]">Extracted Signals</span>
+                                {extractEsotericKeywords(message.content).map((keyword) => (
+                                  <span key={keyword} className="rounded-sm border border-[#6f55c7] bg-[#21154d]/60 px-2 py-0.5 text-[#d7c7ff] shadow-[0_0_12px_rgba(139,92,246,0.2)]">
+                                    {keyword}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap">
+                            {segmentEsotericText(message.content).map((segment, segmentIndex) =>
+                              segment.keyword ? (
+                                <mark key={`${segment.keyword}-${segmentIndex}`} className="rounded-sm bg-[#21154d] px-1 text-[#8be9ff] shadow-[0_0_14px_rgba(6,182,212,0.22)]">
+                                  {segment.text}
+                                </mark>
+                              ) : (
+                                <span key={segmentIndex}>{segment.text}</span>
+                              )
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
 
-            {/* Input Area */}
-            <div className="border-t border-border bg-slate-950 p-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="What troubles you? What do you need clarity on?"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                  disabled={isLoading}
-                  className="flex-1 bg-slate-800 border-slate-700 text-gray-100 placeholder-gray-500"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={isLoading || !inputValue.trim()}
-                  className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
+                {isLoading && (
+                  <div className="flex justify-start" role="status">
+                    <div className="border-l border-[#b8a1ff] px-4 py-1 text-sm text-[#a6aec0]">
+                      <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#b8a1ff]" /> Portal is listening through the noise…
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <Zap className="w-12 h-12 mx-auto mb-4 text-orange-600 opacity-50" />
-              <p>Select or create a conversation to begin</p>
+
+            <div className="border-t border-[#1a2240] py-4">
+              <div className="flex items-end gap-3">
+                <Button type="button" aria-label={isListening ? "Stop listening" : "Speak a message"} onClick={toggleListening} disabled={activeConversationId === null || isLoading} className={`h-12 w-12 shrink-0 rounded-none border border-[#273865] p-0 ${isListening ? "bg-[#21154d] text-[#cbb8ff] shadow-[0_0_22px_rgba(139,92,246,0.35)]" : "bg-transparent text-[#8be9ff] hover:bg-[#101a32]"}`}><Mic className="h-4 w-4" /></Button>
+                <Input
+                  ref={composerRef}
+                  aria-label="Message Portal"
+                  placeholder="Ask the question beneath the question."
+                  value={inputValue}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      void handleSendMessage();
+                    }
+                  }}
+                  disabled={isLoading || activeConversationId === null}
+                  className="h-12 rounded-none border-[#1a2240] bg-[#080d1b] text-[#f4f4f5] placeholder:text-[#737b8f] focus-visible:ring-[#8be9ff]"
+                />
+                <Button
+                  aria-label="Send message"
+                  onClick={() => void handleSendMessage()}
+                  disabled={isLoading || activeConversationId === null || !inputValue.trim()}
+                  className="h-12 w-12 shrink-0 rounded-none bg-[#d7c7ff] p-0 text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="mt-3 flex justify-between gap-4 text-[0.62rem] uppercase tracking-[0.16em] text-[#737b8f]">
+                <span>Conversation is the interface</span>
+                <span className="hidden sm:inline">Unvarnished dialogue</span>
+              </div>
             </div>
           </div>
-        )}
+        </section>
+
+        <aside className="hidden w-[18rem] shrink-0 flex-col border-l border-[#1a2240] bg-[#060914] xl:flex" aria-label="Portal presence and conversation context">
+          <div className="border-b border-[#1a2240] px-5 py-5">
+            <div className="flex items-center justify-between text-[0.62rem] uppercase tracking-[0.22em] text-[#737b8f]">
+              <span>Presence</span>
+              <span className="flex items-center gap-2 text-[#e8ddff]"><span className="h-1.5 w-1.5 rounded-full bg-[#8be9ff]" /> {presenceState}</span>
+            </div>
+            <div className="mx-auto mt-7 grid h-24 w-24 place-items-center rounded-full border border-[#354064] bg-[radial-gradient(circle,rgba(139,92,246,0.24),rgba(6,182,212,0.16)_42%,transparent_72%)] text-[#f5ede3] shadow-[0_0_50px_rgba(139,92,246,0.24)] animate-pulse">
+              <div className="grid h-12 w-12 place-items-center rounded-full border border-[#b8a1ff]/70"><Sparkles className="h-5 w-5" /></div>
+            </div>
+            <div className="mt-5 text-center text-[0.62rem] uppercase tracking-[0.2em] text-[#737b8f]">Signal state</div>
+            <div className="mt-2 text-center font-serif text-lg text-[#f3eadb]">{currentState}</div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+            <div className="mb-3 text-[0.62rem] uppercase tracking-[0.22em] text-[#737b8f]">Dialogue signal</div>
+            <div className="space-y-2">
+              <div className="border border-[#202637] bg-[#0b1020] px-3 py-3"><div className="text-[0.62rem] uppercase tracking-[0.16em] text-[#a7a2c2]">Thread signal</div><div className="mt-1 line-clamp-2 text-sm leading-6 text-[#c7c9d5]">{conversationSignal}</div></div>
+              <div className="border border-[#202637] bg-[#0b1020] px-3 py-3"><div className="text-[0.62rem] uppercase tracking-[0.16em] text-[#a7a2c2]">Dialogue frequency</div><div className="mt-1 text-sm leading-6 text-[#c7c9d5]">{stage ? STAGE_LABELS[stage] : "Awaiting Contact"}</div></div>
+              <div className="border border-[#202637] bg-[#0b1020] px-3 py-3"><div className="text-[0.62rem] uppercase tracking-[0.16em] text-[#a7a2c2]">Unresolved thread</div><div className="mt-1 line-clamp-3 text-sm leading-6 text-[#c7c9d5]">{resonanceCue}</div></div>
+              <button type="button" onClick={() => setShowKeywordPanel(true)} className="w-full border border-[#6f55c7] bg-[#21154d]/35 px-3 py-3 text-left transition hover:bg-[#21154d]/65"><div className="text-[0.62rem] uppercase tracking-[0.16em] text-[#cbb8ff]">Esoteric lexicon · {esotericKeywords.length}</div><div className="mt-2 flex flex-wrap gap-1">{esotericKeywords.slice(0, 5).map((keyword) => <span key={keyword} className="text-[0.62rem] text-[#8be9ff]">#{keyword}</span>)}{esotericKeywords.length === 0 && <span className="text-xs text-[#737b8f]">Awaiting signal</span>}</div></button>
+            </div>
+          </div>
+
+          <div className="border-t border-[#1a2240] px-4 py-4 text-[0.62rem] uppercase tracking-[0.16em] text-[#5d667c]">No fabricated signal</div>
+        </aside>
       </div>
-    </div>
+    </main>
   );
 }

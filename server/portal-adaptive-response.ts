@@ -6,6 +6,7 @@
  */
 
 import { invokeLLM } from "./_core/llm";
+import { invokeBedrock, isBedrockConfigured } from "./bedrock-gateway";
 import type { UserContext } from "./portal-context-retrieval";
 import { formatContextForLLM } from "./portal-context-retrieval";
 import type { StrategySelection, DialogueStrategy } from "./portal-strategy-selector";
@@ -19,6 +20,8 @@ export interface AdaptiveResponse {
     patternsActivated: string[];
     breakthroughIndicators: string[];
     nextSuggestedAction: string;
+    provider: "bedrock" | "built-in" | "fallback";
+    modelId?: string;
     learningMemoryUpdates: {
       corePatterns?: string[];
       growthAreas?: string[];
@@ -45,16 +48,47 @@ export async function generateAdaptiveResponse(
     // Build message history with context injection
     const messages = buildMessageHistory(userMessage, recentMessages, context, strategy);
 
-    // Call LLM
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages,
-      ],
-    });
+    // Prefer the user-owned Bedrock gateway when configured. If AWS credentials,
+    // regional access, or a model profile are unavailable, preserve the existing
+    // response path so the Portal remains usable during configuration.
+    let portalResponse: string;
+    let provider: AdaptiveResponse["metadata"]["provider"] = "built-in";
+    let modelId: string | undefined;
 
-    const responseContent = response.choices[0]?.message?.content;
-    const portalResponse = typeof responseContent === "string" ? responseContent : "Portal reflection unavailable";
+    if (isBedrockConfigured()) {
+      try {
+        const bedrockResponse = await invokeBedrock({
+          system: systemPrompt,
+          messages,
+          maxTokens: 4096,
+          temperature: 0.1,
+          topP: 0.9,
+        });
+        portalResponse = bedrockResponse.content;
+        provider = "bedrock";
+        modelId = bedrockResponse.modelId;
+      } catch (bedrockError) {
+        console.warn("[Portal Adaptive Response] Bedrock failed; using built-in fallback", bedrockError);
+        const fallbackResponse = await invokeLLM({
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+          ],
+        });
+        const fallbackContent = fallbackResponse.choices[0]?.message?.content;
+        portalResponse = typeof fallbackContent === "string" ? fallbackContent : "Portal reflection unavailable";
+        provider = "fallback";
+      }
+    } else {
+      const response = await invokeLLM({
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+      });
+      const responseContent = response.choices[0]?.message?.content;
+      portalResponse = typeof responseContent === "string" ? responseContent : "Portal reflection unavailable";
+    }
 
     // Extract learning updates from response
     const learningUpdates = extractLearningUpdates(portalResponse, context);
@@ -66,6 +100,8 @@ export async function generateAdaptiveResponse(
       strategy: strategy.strategy,
       response: portalResponse,
       metadata: {
+        provider,
+        modelId,
         patternsActivated: context.learning.corePatterns.slice(0, 3),
         breakthroughIndicators: extractBreakthroughIndicators(portalResponse),
         nextSuggestedAction,
