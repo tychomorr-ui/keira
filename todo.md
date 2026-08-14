@@ -88,9 +88,9 @@
 
 
 ## Amazon Bedrock Gateway
-- [ ] Add AWS Bedrock Runtime SDK dependency
-- [ ] Implement server-side Bedrock gateway with deterministic model routing and timeout handling
-- [ ] Wire Bedrock gateway into Portal chat orchestration with fallback behavior
-- [ ] Add server-only AWS credential configuration and regression tests
-- [ ] Run TypeScript and full Vitest checks
-- [ ] Save Bedrock integration checkpoint
+- [x] Add AWS Bedrock Runtime SDK dependency
+- [x] Implement server-side Bedrock gateway with deterministic model routing and timeout handling
+- [x] Wire Bedrock gateway into Portal chat orchestration with fallback behavior
+- [x] Add server-only AWS credential configuration and regression tests
+- [x] Run TypeScript and full Vitest checks
+- [x] Save Bedrock integration checkpoint
