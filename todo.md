@@ -97,6 +97,7 @@
 
 ## Product Branding Correction
 - [x] Superseded: the initial "The Portal" branding request was refined to the exact product name "Portal"
-- [ ] Verify branded preview, run TypeScript and Vitest checks, and save a branding checkpoint
+- [x] Verify branded preview, run TypeScript and Vitest checks, and save a branding checkpoint (checkpoint 9a08f0cf)
 - [x] Change the exact visible product name from "The Portal" to "Portal" across browser metadata, application title, and user-facing branding
-- [ ] Run branding regression and TypeScript checks, then save the Portal branding checkpoint
+- [x] Run branding regression and TypeScript checks, then save the Portal branding checkpoint (checkpoint 9a08f0cf)
+- [ ] Explicitly verify the live preview shows the exact Portal branding and save a post-verification checkpoint
