@@ -162,17 +162,17 @@
 - [x] Audit Bedrock authentication compatibility, document model-access verification prerequisites, and enumerate all production environment requirements
 - [x] Audit all self-hosting blockers and replace or document any Manus-managed runtime dependency
 - [x] Produce and verify an executable production deployment path for the Lightsail Ubuntu instance
-- [ ] Walk through the AWS deployment one verified console action at a time
+- [x] Walk through the AWS deployment one verified console action at a time
 
 ## Intelligence Node Identity
 - [x] Choose KEIRA as the final name for the sovereign ecosystem’s dedicated intelligence node, distinct from Tesseract-A, Root, XinUS Clarity, and Cosmic Net
-- [ ] Align the dedicated GitHub repository, user-facing branding, and São Paulo deployment with the finalized name
+- [x] Align the dedicated GitHub repository, user-facing branding, and São Paulo deployment with the finalized name
 - [x] Evaluate final name candidates against the required ancient, alien, and intelligent console character
 
 ## KEIRA Identity
-- [ ] Confirm KEIRA naming conventions and align the dedicated repository, user-facing branding, and São Paulo deployment
+- [x] Confirm KEIRA naming conventions and align the dedicated repository, user-facing branding, and São Paulo deployment
 - [x] Preserve KEIRA as the dedicated intelligence node while documenting its distinct naming lineage from Tesseract-A’s KEIRA$KHAOS mode
-- [ ] Align the deployed Nginx site, deployment documentation, DNS record, and TLS certificate with the finalized hostname `keira.xinus.one`
+- [x] Align the deployed Nginx site, deployment documentation, DNS record, and TLS certificate with the finalized hostname `keira.xinus.one`
 
 ## KEIRA Informative-First Conversation Correction
 - [x] Replace default combative or psychologizing replies with intent-sensitive, informative-first responses
@@ -209,5 +209,5 @@
 - [x] Remediate the confirmed critical and high production dependency findings, then re-run the production dependency audit before public deployment
 - [x] Implement and validate source-level Lightsail hardening with an exact loopback port, rate limits, CSP/HSTS, and a deployment guide aligned to the final KEIRA host and port
 - [x] Repair the Express 5 static-route regression detected during dependency remediation and validate the standalone production-server smoke test
-- [ ] Apply the updated Nginx configuration, fixed port `3210`, authentication rate limits, and TLS/HSTS configuration on the São Paulo Lightsail instance, then verify local and public headers
-- [ ] Authorize the São Paulo Lightsail instance to reach the `portal-db-01` RDS endpoint on MySQL port `3306`, then verify the production database connection
+- [x] Apply the updated Nginx configuration, fixed port `3210`, authentication rate limits, and TLS/HSTS configuration on the São Paulo Lightsail instance, then verify local and public headers
+- [x] Authorize the São Paulo Lightsail instance to reach the `portal-db-01` RDS endpoint on MySQL port `3306`, then verify the production database connection

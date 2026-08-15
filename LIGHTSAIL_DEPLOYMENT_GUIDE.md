@@ -139,6 +139,9 @@ sudo systemctl restart nginx
 
 # Issue free SSL certificate via Let's Encrypt after keira.xinus.one points to the instance
 sudo certbot --nginx -d keira.xinus.one
+
+# Verify HSTS is present on the HTTPS response after Certbot updates Nginx.
+curl -fsSI https://keira.xinus.one/ | grep -i '^Strict-Transport-Security:'
 ```
 
 ---
@@ -156,7 +159,7 @@ pm2 logs keira-intelligence --lines 50
 To update KEIRA later, retrieve the audited GitHub revision, reinstall deterministic dependencies, migrate, rebuild, and restart the process:
 
 ```bash
-cd ~/keira
+cd /opt/keira
 git pull --ff-only origin main
 pnpm install --frozen-lockfile
 pnpm drizzle-kit migrate
