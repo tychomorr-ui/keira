@@ -28,6 +28,34 @@ const cmapSessions = new Map<number, MissionState>(); // Keyed by conversationId
 export const portalChatRouter = router({
   getCapabilities: protectedProcedure.query(() => getKeiraCapabilities()),
 
+  getContextLedger: protectedProcedure.query(async ({ ctx }) => {
+    return await portalChat.getContextEntries(ctx.user.id);
+  }),
+
+  addContextLedgerEntry: protectedProcedure
+    .input(z.object({
+      label: z.string().trim().min(1).max(120),
+      content: z.string().trim().min(1).max(4000),
+      kind: z.enum(["fact", "preference", "goal", "note"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return await portalChat.createContextEntry(ctx.user.id, input);
+    }),
+
+  setContextLedgerEntryActive: protectedProcedure
+    .input(z.object({ entryId: z.number().int().positive(), isActive: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      await portalChat.setContextEntryActive(ctx.user.id, input.entryId, input.isActive);
+      return { ok: true };
+    }),
+
+  deleteContextLedgerEntry: protectedProcedure
+    .input(z.object({ entryId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      await portalChat.deleteContextEntry(ctx.user.id, input.entryId);
+      return { ok: true };
+    }),
+
   getConversations: protectedProcedure.query(async ({ ctx }) => {
     return await portalChat.getUserConversations(ctx.user.id);
   }),
@@ -91,6 +119,10 @@ export const portalChatRouter = router({
         modelTemperature: userRecord[0].modelTemperature,
         predictiveSensitivity: userRecord[0].predictiveSensitivity,
       };
+      const contextLedger = await portalChat.getContextEntries(ctx.user.id);
+      (userContext as any).contextLedger = contextLedger
+        .filter((entry) => entry.isActive === 1)
+        .map((entry) => ({ label: entry.label, content: entry.content, kind: entry.kind }));
 
       // Classify learning stage
       const stageClassification = classifyLearningStage(userContext);
@@ -111,7 +143,8 @@ export const portalChatRouter = router({
         message,
         userContext,
         strategySelection,
-        recentMessages
+        recentMessages,
+        userRecord[0].modelTemperature,
       );
       const latencyMs = Date.now() - startTime;
 

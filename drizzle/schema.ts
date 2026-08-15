@@ -236,3 +236,21 @@ export const portalLearningMemory = mysqlTable("portalLearningMemory", {
 
 export type PortalLearningMemory = typeof portalLearningMemory.$inferSelect;
 export type InsertPortalLearningMemory = typeof portalLearningMemory.$inferInsert;
+
+/**
+ * Operator-owned context ledger. Entries are explicit, inspectable, and removable;
+ * only active entries may be included as optional context for KEIRA responses.
+ */
+export const keiraContextEntries = mysqlTable("keiraContextEntries", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  label: varchar("label", { length: 120 }).notNull(),
+  content: text("content").notNull(),
+  kind: mysqlEnum("kind", ["fact", "preference", "goal", "note"]).default("note").notNull(),
+  isActive: int("isActive").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type KeiraContextEntry = typeof keiraContextEntries.$inferSelect;
+export type InsertKeiraContextEntry = typeof keiraContextEntries.$inferInsert;

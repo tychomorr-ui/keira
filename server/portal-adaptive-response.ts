@@ -38,7 +38,8 @@ export async function generateAdaptiveResponse(
   userMessage: string,
   context: UserContext,
   strategy: StrategySelection,
-  recentMessages: Array<{ role: 'user' | 'portal'; content: string }>
+  recentMessages: Array<{ role: 'user' | 'portal'; content: string }>,
+  responseVariation?: number,
 ): Promise<AdaptiveResponse> {
   try {
     // Build comprehensive system prompt
@@ -54,12 +55,13 @@ export async function generateAdaptiveResponse(
 
     if (isBedrockConfigured()) {
       try {
+        const normalizedVariation = Math.max(0, Math.min(1, Number.isFinite(responseVariation) ? Number(responseVariation) / 100 : 0.1));
         const bedrockResponse = await invokeBedrock({
           system: systemPrompt,
           messages,
           maxTokens: 4096,
-          temperature: 0.1,
-          topP: 0.9,
+          temperature: normalizedVariation,
+          topP: Math.max(0.6, Math.min(1, 0.8 + normalizedVariation * 0.2)),
         });
         portalResponse = bedrockResponse.content;
         provider = "bedrock";
@@ -106,6 +108,7 @@ function buildSystemPrompt(context: UserContext, strategy: StrategySelection): s
   const customPersona = (context as any).profile?.customPersona;
   const customInstructions = (context as any).profile?.customInstructions;
   const predictiveSensitivity = (context as any).profile?.predictiveSensitivity ?? 75;
+  const contextLedger = (context as any).contextLedger as Array<{ label: string; content: string; kind: string }> | undefined;
 
   lines.push(customPersona ? `You are KEIRA. The operator's requested persona is: ${customPersona}` : `You are KEIRA, a sovereign conversational intelligence node.
 
@@ -125,6 +128,15 @@ Your core characteristics:
 - Do not present speculation as prediction, read hidden intent, or claim preternatural precision.`);
 
   lines.push("");
+
+  if (contextLedger?.length) {
+    lines.push("OPERATOR-OWNED ACTIVE CONTEXT (explicit, fallible, and removable by the operator):");
+    contextLedger.slice(0, 12).forEach((entry) => {
+      lines.push(`- ${entry.kind}: ${entry.label} — ${entry.content}`);
+    });
+    lines.push("Use this only when relevant to the active request. Do not infer additional facts from it.");
+    lines.push("");
+  }
 
   // User's learning profile
   if (strategy.strategy !== 'informative') {

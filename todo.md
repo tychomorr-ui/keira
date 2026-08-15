@@ -184,3 +184,11 @@
 - [x] Implement prioritized high-value capability and conversation upgrades with endpoint and regression-test coverage
 - [x] Refine the KEIRA console and voice interaction experience without fabricating telemetry or adding decorative dead controls
 - [x] Validate and publish the compound-upgraded KEIRA release before resuming São Paulo deployment
+
+## KEIRA Competitive Capability Benchmark
+- [x] Benchmark leading AI conversation, research, reasoning, memory, voice, and interface capability patterns against KEIRA
+- [x] Produce a sovereign-priority gap matrix that separates buildable improvements from provider- or browser-dependent features
+- [x] Implement and validate the highest-value competitive upgrades before resuming São Paulo deployment
+- [x] Add operator-owned context-ledger entries with list, create, delete, and active-context endpoints
+- [x] Apply saved response calibration to the actual Bedrock inference request and expose its active non-sensitive state
+- [x] Add operator-visible research and realtime-voice readiness states without claiming unconfigured providers are active

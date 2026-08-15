@@ -4,6 +4,7 @@ import {
   portalConversations,
   portalChatMessages,
   portalLearningMemory,
+  keiraContextEntries,
 } from "../drizzle/schema";
 
 export async function createConversation(
@@ -168,4 +169,70 @@ export async function updateLearningMemory(
     .update(portalLearningMemory)
     .set(updateData)
     .where(eq(portalLearningMemory.userId, userId));
+}
+
+export async function getContextEntries(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db
+    .select()
+    .from(keiraContextEntries)
+    .where(eq(keiraContextEntries.userId, userId))
+    .orderBy(desc(keiraContextEntries.updatedAt));
+}
+
+export async function createContextEntry(
+  userId: number,
+  entry: { label: string; content: string; kind: "fact" | "preference" | "goal" | "note" },
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(keiraContextEntries).values({
+    userId,
+    label: entry.label,
+    content: entry.content,
+    kind: entry.kind,
+    isActive: 1,
+  });
+
+  return result[0].insertId;
+}
+
+export async function setContextEntryActive(userId: number, entryId: number, isActive: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const entry = await db
+    .select()
+    .from(keiraContextEntries)
+    .where(eq(keiraContextEntries.id, entryId))
+    .limit(1);
+
+  if (!entry.length || entry[0].userId !== userId) {
+    throw new Error("Context entry not found or unauthorized");
+  }
+
+  await db
+    .update(keiraContextEntries)
+    .set({ isActive: isActive ? 1 : 0 })
+    .where(eq(keiraContextEntries.id, entryId));
+}
+
+export async function deleteContextEntry(userId: number, entryId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const entry = await db
+    .select()
+    .from(keiraContextEntries)
+    .where(eq(keiraContextEntries.id, entryId))
+    .limit(1);
+
+  if (!entry.length || entry[0].userId !== userId) {
+    throw new Error("Context entry not found or unauthorized");
+  }
+
+  await db.delete(keiraContextEntries).where(eq(keiraContextEntries.id, entryId));
 }

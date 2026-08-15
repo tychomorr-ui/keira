@@ -78,6 +78,14 @@ type MessageMetadata = {
   cmap?: CmapState;
 };
 
+type ContextLedgerEntry = {
+  id: number;
+  label: string;
+  content: string;
+  kind: "fact" | "preference" | "goal" | "note";
+  isActive: number;
+};
+
 const STAGE_LABELS: Record<LearningStage, string> = {
   awakening: "Awakening",
   exploration: "Exploration",
@@ -136,6 +144,9 @@ export default function PortalChat() {
   const [showKeywordPanel, setShowKeywordPanel] = useState(false);
   const [showVoicePanel, setShowVoicePanel] = useState(false);
   const [showCapabilityPanel, setShowCapabilityPanel] = useState(false);
+  const [ledgerLabel, setLedgerLabel] = useState("");
+  const [ledgerContent, setLedgerContent] = useState("");
+  const [ledgerKind, setLedgerKind] = useState<ContextLedgerEntry["kind"]>("note");
   const [voiceSupport, setVoiceSupport] = useState({ input: false, output: false });
   const [newTitle, setNewTitle] = useState("");
   const [profileDraft, setProfileDraft] = useState({
@@ -181,6 +192,12 @@ export default function PortalChat() {
   const capabilitiesQuery = trpc.portal.chat.getCapabilities.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+  const contextLedgerQuery = trpc.portal.chat.getContextLedger.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const addContextLedgerEntryMutation = trpc.portal.chat.addContextLedgerEntry.useMutation();
+  const setContextLedgerEntryActiveMutation = trpc.portal.chat.setContextLedgerEntryActive.useMutation();
+  const deleteContextLedgerEntryMutation = trpc.portal.chat.deleteContextLedgerEntry.useMutation();
 
   useEffect(() => {
     if (conversationsQuery.data) {
@@ -417,6 +434,22 @@ export default function PortalChat() {
       console.error("Failed to send KEIRA message", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAddContextLedgerEntry = async () => {
+    if (!ledgerLabel.trim() || !ledgerContent.trim()) return;
+    try {
+      await addContextLedgerEntryMutation.mutateAsync({
+        label: ledgerLabel.trim(),
+        content: ledgerContent.trim(),
+        kind: ledgerKind,
+      });
+      setLedgerLabel("");
+      setLedgerContent("");
+      await contextLedgerQuery.refetch();
+    } catch (error) {
+      setProfileStatus(error instanceof Error ? error.message : "Context entry could not be saved.");
     }
   };
 
@@ -753,20 +786,47 @@ export default function PortalChat() {
             )}
 
             {showContextPanel && (
-              <div className="grid gap-4 border-b border-[#202637] py-4 text-xs sm:grid-cols-3" aria-label="Conversation memory details">
-                <div>
-                  <div className="uppercase tracking-[0.18em] text-[#737b8f]">Anchors</div>
-                  <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.decisions[0] || "Awaiting Contact"}</p>
+              <section className="border-b border-[#202637] py-4 text-xs" aria-label="Conversation memory details">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <div className="uppercase tracking-[0.18em] text-[#737b8f]">Anchors</div>
+                    <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.decisions[0] || "Awaiting Contact"}</p>
+                  </div>
+                  <div>
+                    <div className="uppercase tracking-[0.18em] text-[#737b8f]">Known signals</div>
+                    <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.evidence[0] || "Awaiting Contact"}</p>
+                  </div>
+                  <div>
+                    <div className="uppercase tracking-[0.18em] text-[#737b8f]">Unanswered question</div>
+                    <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.openQuestions[0] || "Awaiting Contact"}</p>
+                  </div>
                 </div>
-                <div>
-                  <div className="uppercase tracking-[0.18em] text-[#737b8f]">Known signals</div>
-                  <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.evidence[0] || "Awaiting Contact"}</p>
+                <div className="mt-5 border-t border-[#273865] pt-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="uppercase tracking-[0.18em] text-[#8be9ff]">Operator context ledger</div>
+                      <p className="mt-1 text-xs leading-5 text-[#737b8f]">Only active entries are optional background context. You can pause or remove them at any time.</p>
+                    </div>
+                    <span className="text-[0.62rem] uppercase tracking-[0.16em] text-[#a6aec0]">{contextLedgerQuery.data?.filter((entry) => entry.isActive === 1).length || 0} active</span>
+                  </div>
+                  <div className="mt-3 grid gap-2 md:grid-cols-[0.7fr_1fr_1.5fr_auto]">
+                    <select aria-label="Context entry type" value={ledgerKind} onChange={(event) => setLedgerKind(event.target.value as ContextLedgerEntry["kind"])} className="h-10 border border-[#273865] bg-[#0d1630] px-3 text-sm text-[#f4f4f5] outline-none focus:border-[#8be9ff]">
+                      <option value="note">Note</option><option value="fact">Fact</option><option value="preference">Preference</option><option value="goal">Goal</option>
+                    </select>
+                    <Input aria-label="Context entry label" value={ledgerLabel} onChange={(event) => setLedgerLabel(event.target.value)} placeholder="Short label" className="h-10 rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8]" />
+                    <Input aria-label="Context entry content" value={ledgerContent} onChange={(event) => setLedgerContent(event.target.value)} placeholder="Context KEIRA may use when relevant" className="h-10 rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8]" />
+                    <Button type="button" onClick={() => void handleAddContextLedgerEntry()} disabled={!ledgerLabel.trim() || !ledgerContent.trim() || addContextLedgerEntryMutation.isPending} className="h-10 rounded-none bg-[#8be9ff] px-3 text-[#041018] hover:bg-[#c4f7ff]">{addContextLedgerEntryMutation.isPending ? "Saving…" : "Add"}</Button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {contextLedgerQuery.data?.length ? contextLedgerQuery.data.map((entry) => (
+                      <div key={entry.id} className="flex flex-wrap items-start justify-between gap-3 border border-[#273865] bg-[#0d1630] p-3">
+                        <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="text-sm text-[#f3eadb]">{entry.label}</span><span className="text-[0.58rem] uppercase tracking-[0.16em] text-[#cbb8ff]">{entry.kind}</span><span className={`text-[0.58rem] uppercase tracking-[0.16em] ${entry.isActive === 1 ? "text-[#8be9ff]" : "text-[#737b8f]"}`}>{entry.isActive === 1 ? "active" : "paused"}</span></div><p className="mt-1 break-words text-xs leading-5 text-[#a6aec0]">{entry.content}</p></div>
+                        <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" size="sm" onClick={() => void setContextLedgerEntryActiveMutation.mutateAsync({ entryId: entry.id, isActive: entry.isActive !== 1 }).then(() => contextLedgerQuery.refetch())} className="h-8 rounded-none border-[#354064] text-[0.62rem] text-[#cbb8ff] hover:bg-[#21154d]">{entry.isActive === 1 ? "Pause" : "Activate"}</Button><Button type="button" variant="outline" size="sm" onClick={() => void deleteContextLedgerEntryMutation.mutateAsync({ entryId: entry.id }).then(() => contextLedgerQuery.refetch())} className="h-8 rounded-none border-[#4d2941] text-[0.62rem] text-[#ffb4c2] hover:bg-[#29121f]">Remove</Button></div>
+                      </div>
+                    )) : <p className="text-xs leading-5 text-[#737b8f]">No ledger entries yet. Add only information you want KEIRA to consider across future replies.</p>}
+                  </div>
                 </div>
-                <div>
-                  <div className="uppercase tracking-[0.18em] text-[#737b8f]">Unanswered question</div>
-                  <p className="mt-2 leading-6 text-[#a6aec0]">{cmap?.openQuestions[0] || "Awaiting Contact"}</p>
-                </div>
-              </div>
+              </section>
             )}
 
             {showProfilePanel && (
