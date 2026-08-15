@@ -200,3 +200,9 @@
 - [x] Add an answer-quality contract that presents verified capability state, uncertainty boundaries, and concrete next steps without fabricating citations or live research
 - [x] Add regression coverage for response-objective routing, context-carryover limits, and explicit recall-to-ledger promotion
 - [x] Run the complete test suite, strict TypeScript check, production build, and deployment-script validation before publication
+
+## Pre-Deployment KEIRA Security, Integrity & Upgrade Audit
+- [x] Audit the authenticated API surface, input validation, authorization boundaries, security headers, secret handling, and production dependency exposure at Release II
+- [x] Audit the current KEIRA capability implementation against the published benchmark to separate completed work, intentionally unavailable provider-dependent features, and future buildable upgrades
+- [x] Document severity-ranked findings, remediation status, verification commands, and a prioritized post-deployment upgrade roadmap
+- [ ] Remediate the confirmed critical and high production dependency findings, then re-run the production dependency audit before public deployment
