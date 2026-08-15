@@ -14,7 +14,7 @@ The build, strict TypeScript check, production static-serving smoke test, and fu
 | AI inference | The active chat path calls the direct Amazon Bedrock gateway. | Configure `BEDROCK_API_KEY` **or** IAM credentials, plus the selected region and model. |
 | Persistence | Drizzle uses `DATABASE_URL` for portable MySQL/AWS RDS connectivity. | Enforce TLS to RDS and restrict the security group to the instance. |
 | Exports | Transcript objects are written directly to S3 with `aws:kms` server-side encryption and short-lived signed download URLs. | Supply an existing S3 bucket and grant least-privilege object/KMS access. |
-| Web edge | Nginx terminates TLS and proxies only to loopback port `3000`. | Expose ports `80` and `443`, not port `3000`; complete Let’s Encrypt after DNS is live. |
+| Web edge | Nginx terminates TLS and proxies only to exact loopback port `3210`; the server refuses a production fallback port. | Expose ports `80` and `443`, not port `3210`; complete Let’s Encrypt after DNS is live. |
 
 ## Active API surface
 
@@ -33,9 +33,9 @@ There is deliberately **no** active Stripe webhook, Mirror, knowledge-graph, sub
 
 ## Runtime hardening
 
-The Express entrypoint disables `X-Powered-By` and sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and `Cross-Origin-Opener-Policy` headers. Nginx must remain the public ingress. The supplied `deploy-lightsail.sh` script binds KEIRA locally and configures Nginx to route public traffic to `127.0.0.1:3000`.
+The Express entrypoint disables `X-Powered-By` and sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, and a restrictive Content Security Policy. Nginx must remain the public ingress. The supplied `deploy-lightsail.sh` script binds KEIRA locally and configures Nginx to route public traffic to `127.0.0.1:3210`.
 
-Application-level login throttling is not implemented in the audited code. Add an Nginx `limit_req` zone or an upstream WAF/rate-limit policy before inviting public traffic. This is an explicit deployment control, not a claim of a currently configured service.
+The audited deployment helper configures an Nginx `limit_req` zone for login, registration, and owner-bootstrap calls. Verify the loaded Nginx configuration on the Lightsail host before public traffic is enabled.
 
 ## Required production configuration
 
@@ -70,7 +70,7 @@ bash -n deploy-lightsail.sh
 After the service starts, verify the local process before routing live traffic:
 
 ```bash
-curl -I http://127.0.0.1:3000/
+curl -I http://127.0.0.1:3210/
 pm2 status
 pm2 logs portal-sovereign --lines 50
 ```

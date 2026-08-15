@@ -6,7 +6,7 @@ This guide details how to deploy **KEIRA**, the sovereign intelligence node, as 
 
 ## 1. Instance Provisioning & System Prereqs
 1. Spin up an **AWS Lightsail Ubuntu 24.04 LTS** instance (Recommended: 2 GB RAM / 1 vCPU or higher).
-2. Attach a static IP and open ports `80` (HTTP) and `443` (HTTPS). Keep the KEIRA process on loopback port `3000`; do **not** expose port `3000` publicly when Nginx is the reverse proxy.
+2. Attach a static IP and open ports `80` (HTTP) and `443` (HTTPS). Keep the KEIRA process on exact loopback port `3210`; do **not** expose port `3210` publicly when Nginx is the reverse proxy.
 3. SSH into your instance or use the Lightsail browser console.
 
 ---
@@ -44,7 +44,7 @@ pnpm install --frozen-lockfile
 Create a `.env` file in the project root:
 ```env
 NODE_ENV=production
-PORT=3000
+PORT=3210
 DATABASE_URL=mysql://portal_user:replace-with-rds-password@portal-db-01.replace-with-rds-endpoint:3306/portal_db
 JWT_SECRET=replace-with-a-long-random-32-plus-character-secret
 PORTAL_OWNER_ACCESS_TOKEN=replace-with-a-long-random-owner-access-token
@@ -80,8 +80,8 @@ chmod 600 .env
 # Install PM2 process manager
 sudo npm install -g pm2
 
-# Apply schema migrations before serving a new version
-pnpm db:push
+# Apply only committed schema migrations before serving a new version
+pnpm drizzle-kit migrate
 
 # Build the frontend and backend bundle
 pnpm build
@@ -97,14 +97,29 @@ pm2 save
 ---
 
 ## 6. Configure Nginx Reverse Proxy & SSL (HTTPS)
-Configure Nginx (`/etc/nginx/sites-available/keira`) to proxy traffic to port `3000`:
+Configure Nginx (`/etc/nginx/sites-available/keira`) to proxy traffic to port `3210` and rate-limit authentication attempts:
 ```nginx
+limit_req_zone $binary_remote_addr zone=keira_auth:10m rate=10r/m;
+
 server {
     listen 80;
-    server_name keira.xinus.one;
+    server_name portal.xinus.one;
+
+    # Browsers honor HSTS only once TLS is enabled by Certbot.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location ~ ^/api/trpc/auth\.(login|register|ownerBootstrap) {
+        limit_req zone=keira_auth burst=5 nodelay;
+        proxy_pass http://127.0.0.1:3210;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3210;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -122,17 +137,17 @@ sudo ln -s /etc/nginx/sites-available/keira /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
-# Issue free SSL certificate via Let's Encrypt
-sudo certbot --nginx -d keira.xinus.one
+# Issue free SSL certificate via Let's Encrypt after portal.xinus.one points to the instance
+sudo certbot --nginx -d portal.xinus.one
 ```
 
 ---
 
 ## 7. Verify Before Switching DNS
-After the build and process start, use the following checks from the Lightsail browser console. The first verifies the local application, then the second verifies Nginx. Only point `keira.xinus.one` to the instance static IP after both respond successfully.
+After the build and process start, use the following checks from the Lightsail browser console. The first verifies the local application, then the second verifies Nginx. Only point `portal.xinus.one` to the instance static IP after both respond successfully.
 
 ```bash
-curl -I http://127.0.0.1:3000/
+curl -I http://127.0.0.1:3210/
 curl -I http://127.0.0.1/
 pm2 status
 pm2 logs keira-intelligence --lines 50
@@ -144,7 +159,7 @@ To update KEIRA later, retrieve the audited GitHub revision, reinstall determini
 cd ~/keira
 git pull --ff-only origin main
 pnpm install --frozen-lockfile
-pnpm db:push
+pnpm drizzle-kit migrate
 pnpm build
 pm2 restart keira-intelligence --update-env
 ```

@@ -8,7 +8,7 @@ APP_DIR="${APP_DIR:-/opt/keira}"
 REPO_URL="${REPO_URL:-https://github.com/tychomorr-ui/keira.git}"
 BRANCH="${BRANCH:-main}"
 KEIRA_DOMAIN="${KEIRA_DOMAIN:-portal.xinus.one}"
-APP_PORT="${APP_PORT:-3000}"
+APP_PORT="${APP_PORT:-3210}"
 
 required_environment_variables=(
   DATABASE_URL
@@ -25,7 +25,7 @@ require_env_file() {
   if [[ ! -f .env ]]; then
     cat > .env <<'ENVIRONMENT'
 NODE_ENV=production
-PORT=3000
+PORT=3210
 DATABASE_URL=mysql://portal_user:replace-with-password@replace-with-rds-endpoint:3306/portal_db
 JWT_SECRET=replace-with-a-long-random-secret
 PORTAL_OWNER_ACCESS_TOKEN=replace-with-a-long-random-owner-token
@@ -75,9 +75,9 @@ cd "$APP_DIR"
 
 require_env_file
 
-echo "Installing, migrating, and building KEIRA..."
+echo "Installing, applying committed migrations, and building KEIRA..."
 pnpm install --frozen-lockfile
-pnpm db:push
+pnpm drizzle-kit migrate
 pnpm build
 
 echo "Starting KEIRA through PM2..."
@@ -87,9 +87,24 @@ pm2 save
 
 echo "Configuring the Nginx reverse proxy..."
 sudo tee /etc/nginx/sites-available/keira >/dev/null <<NGINX
+limit_req_zone \$binary_remote_addr zone=keira_auth:10m rate=10r/m;
+
 server {
     listen 80;
     server_name ${KEIRA_DOMAIN};
+
+    # Ignored by browsers over HTTP, enforced after Certbot enables TLS.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    location ~ ^/api/trpc/auth\.(login|register|ownerBootstrap) {
+        limit_req zone=keira_auth burst=5 nodelay;
+        proxy_pass http://127.0.0.1:${APP_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
 
     location / {
         proxy_pass http://127.0.0.1:${APP_PORT};

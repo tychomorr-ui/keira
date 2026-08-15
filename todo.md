@@ -205,4 +205,7 @@
 - [x] Audit the authenticated API surface, input validation, authorization boundaries, security headers, secret handling, and production dependency exposure at Release II
 - [x] Audit the current KEIRA capability implementation against the published benchmark to separate completed work, intentionally unavailable provider-dependent features, and future buildable upgrades
 - [x] Document severity-ranked findings, remediation status, verification commands, and a prioritized post-deployment upgrade roadmap
-- [ ] Remediate the confirmed critical and high production dependency findings, then re-run the production dependency audit before public deployment
+- [x] Remediate the confirmed critical and high production dependency findings, then re-run the production dependency audit before public deployment
+- [x] Implement and validate source-level Lightsail hardening with an exact loopback port, rate limits, CSP/HSTS, and a deployment guide aligned to the final KEIRA host and port
+- [x] Repair the Express 5 static-route regression detected during dependency remediation and validate the standalone production-server smoke test
+- [ ] Apply the updated Nginx configuration, fixed port `3210`, authentication rate limits, and TLS/HSTS configuration on the São Paulo Lightsail instance, then verify local and public headers

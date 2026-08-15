@@ -6,6 +6,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { KEIRA_SECURITY_HEADERS } from "./security-headers";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,11 +33,9 @@ async function startServer() {
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
   app.use((_req, res, next) => {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "DENY");
-    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-    res.setHeader("Permissions-Policy", "camera=(), geolocation=(), payment=(), usb=()");
-    res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+    for (const [name, value] of Object.entries(KEIRA_SECURITY_HEADERS)) {
+      res.setHeader(name, value);
+    }
     next();
   });
   app.use(express.json({ limit: "1mb" }));
@@ -56,15 +55,19 @@ async function startServer() {
     serveStatic(app);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
+  const preferredPort = parseInt(process.env.PORT || "3210", 10);
+  if (!Number.isInteger(preferredPort) || preferredPort < 1 || preferredPort > 65535) {
+    throw new Error("PORT must be a valid TCP port number.");
+  }
+  const isProduction = process.env.NODE_ENV === "production";
+  const port = isProduction ? preferredPort : await findAvailablePort(preferredPort);
 
-  if (port !== preferredPort) {
+  if (!isProduction && port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
+  server.listen({ port, host: isProduction ? "127.0.0.1" : undefined }, () => {
+    console.log(`Server running on http://${isProduction ? "127.0.0.1" : "localhost"}:${port}/`);
   });
 }
 

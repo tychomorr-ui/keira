@@ -4,7 +4,7 @@
 **Audited revision:** `2af0355` — `compound KEIRA response controls and local recall`  
 **Scope:** The active KEIRA source and build path, including authenticated tRPC procedures, first-party auth, Bedrock and S3 gateways, profile-backed response controls, local dialogue recall, runtime headers, deployment helper, production dependency audit, and the São Paulo self-hosting runbook.
 
-> **Decision:** KEIRA’s active product behavior is coherent and materially stronger after Release II, but it is **not yet ready for public deployment**. A verified production dependency audit reports one critical and twenty-one high findings. Those must be remediated and re-audited before the public edge is opened.
+> **Decision:** KEIRA’s active product behavior is coherent and materially stronger after Release II. The supply-chain remediation was completed and a fresh production audit now returns **“No known vulnerabilities found.”** The source release now includes exact loopback binding, Nginx authentication rate limits, a browser content-security policy, and HSTS guidance. Public activation remains conditional only on operator-controlled AWS tasks: applying the reviewed configuration on Lightsail, enabling TLS after DNS, and validating the firewall.
 
 ## Executive assessment
 
@@ -21,8 +21,8 @@ The active runtime is narrow by design. Only `auth.*` and `portal.chat.*` are mo
 | Inference integrity | Bedrock is the only active model path; response objective and calibration reach the live request | **Pass** | Keep research and realtime voice marked unavailable until configured. |
 | Stored context | Active ledger is inspectable, pausable, deleteable; recall requires explicit operator promotion | **Pass** | Add retention/export/delete policy before multi-user public launch. |
 | Browser rendering | Markdown is rendered with `streamdown`; no direct application use of `dangerouslySetInnerHTML` was found outside a generic chart component | **Conditional** | Update the transitive Markdown/diagram sanitizer chain before public launch. |
-| Web edge | `X-Content-Type-Options`, frame denial, referrer policy, permissions policy, and COOP are set | **Pass with hardening gap** | Add CSP, HSTS at the HTTPS edge, and Nginx request-rate controls. |
-| Dependency posture | `pnpm audit --prod --audit-level=moderate` reports **1 critical, 21 high, 49 moderate, and 10 low** findings | **Fail / deployment blocker** | Upgrade or remove vulnerable direct and transitive production dependencies, then re-run audit. |
+| Web edge | `X-Content-Type-Options`, frame denial, referrer policy, permissions policy, COOP, and CSP are set; the deployment helper adds Nginx authentication rate limits and HSTS guidance | **Pass in source** | Validate the rendered Nginx/TLS configuration and Lightsail firewall during deployment. |
+| Dependency posture | Initial audit reported **1 critical, 21 high, 49 moderate, and 10 low** findings. After controlled updates/removals, a fresh `pnpm audit --prod --audit-level=moderate` returned **“No known vulnerabilities found.”** | **Pass** | Keep the production audit in the release gate. |
 
 ## Release II implementation audit
 
@@ -43,21 +43,21 @@ The local-recall design is also sound for the current scope. It uses a scoped te
 
 ## Security findings and release gates
 
-### Deployment-blocking supply-chain finding — Critical
+### Remediated supply-chain finding — Critical
 
-The production audit identifies a critical `fast-xml-parser` advisory in the AWS S3 dependency chain. The resolved dependency is `fast-xml-parser@5.2.5`; the audit identifies a patched version of `5.3.5` or later. The affected dependency is transitive through `@aws-sdk/client-s3` and related AWS SDK packages. The public deployment must be paused until the AWS SDK dependency family is updated to a release resolving this chain, the lockfile is regenerated, and `pnpm audit --prod` no longer reports the critical advisory. The upstream advisory documents the entity-processing denial-of-service risk.[1]
+The initial production audit identified a critical `fast-xml-parser` advisory in the AWS S3 dependency chain. The resolved dependency was `fast-xml-parser@5.2.5`; the audit identified a patched version of `5.3.5` or later. The affected dependency was transitive through `@aws-sdk/client-s3` and related AWS SDK packages. KEIRA was updated to aligned AWS SDK `3.1111.0` packages, the lockfile was regenerated, and the fresh production audit no longer reports the advisory. The upstream advisory documents the entity-processing denial-of-service risk.[1]
 
 ### High-severity production dependency findings
 
-The same production audit reports high-severity issues in direct and transitive dependencies, including `axios`, `nanoid`, `@trpc/server`, `drizzle-orm`, `path-to-regexp`, `lodash`/`lodash-es`, and the `streamdown → mermaid → dompurify` rendering chain. Two distinctions matter. First, `axios` has no active source call site in KEIRA and should be removed if the application does not need it. Second, transitive fixes should not be forced blindly: update their immediate parent packages, run the full suite and production build, and only then update the lockfile. The `streamdown` path should receive special attention because KEIRA renders model-generated Markdown in the browser.
+The initial production audit reported high-severity issues in direct and transitive dependencies, including `axios`, `nanoid`, `@trpc/server`, `drizzle-orm`, `path-to-regexp`, `lodash`/`lodash-es`, and the `streamdown → mermaid → dompurify` rendering chain. Remediation removed unused `axios`, removed unused Recharts/chart code that retained a vulnerable Lodash path, and updated AWS SDK, tRPC, Drizzle, Express, NanoID, Streamdown, and its rendering chain. The full suite, strict TypeScript check, production build, deployment-script syntax check, and fresh production audit all passed after the update.
 
-| Severity | Finding | Current exposure | Remediation gate |
+| Severity | Initial finding | Remediation verified | Current state |
 |---|---|---|---|
-| Critical | `fast-xml-parser` via AWS S3 SDK dependency chain | Server process includes S3 client dependency tree | Update aligned AWS SDK packages until audit resolves it. |
-| High | `axios` direct dependency | No active KEIRA call site found | Remove it if unused; otherwise upgrade to the patched release. |
-| High | `nanoid` direct dependency | No active KEIRA call site found in the audited active path | Remove if unused or update to an audit-clean release. |
-| High | `streamdown → mermaid → dompurify` | Browser renders model output as Markdown | Upgrade the rendering chain and regression-test hostile Markdown rendering. |
-| High | `@trpc/server`, `drizzle-orm`, and routing utilities | Active API and database runtime | Upgrade together cautiously, then run router, ownership, and migration tests. |
+| Critical | `fast-xml-parser` via AWS S3 SDK dependency chain | Updated aligned AWS SDK packages to `3.1111.0` | Resolved by clean production audit. |
+| High | Unused direct `axios` | Removed after confirming no active source call site | Resolved by clean production audit. |
+| High | `nanoid` direct dependency | Updated to patched `5.1.16` | Resolved by clean production audit. |
+| High | `streamdown → mermaid → dompurify` | Updated Streamdown and its resolved rendering chain | Resolved by clean production audit. |
+| High | `@trpc/server`, `drizzle-orm`, routing utilities, Recharts/Lodash | Updated tRPC/Drizzle/Express; removed unused Recharts/chart component | Resolved by clean production audit. |
 
 ### Authentication and edge hardening — High priority, not a code exploit finding
 
@@ -67,9 +67,9 @@ No application-level login throttling is present. Before opening public registra
 
 The Express server sets useful baseline headers, but a production TLS configuration should additionally set a Content Security Policy and HTTP Strict Transport Security after the certificate is active. Keep Nginx as the only public ingress, bind the application only to loopback, and do not expose the Node port in the Lightsail firewall. For AWS credentials and S3 access, prefer an instance role or narrowly scoped access keys; AWS recommends granting only permissions required for the task.[4]
 
-### Deployment configuration drift — Medium
+### Deployment configuration drift — Remediated
 
-The checked-in helper and runbook currently use **port 3000** and a KEIRA host example, while earlier operational notes referenced **port 3210** and `portal.xinus.one`. The server can also silently select the next available port if its preferred port is busy. That behavior is convenient in development but undesirable in production because Nginx may continue proxying to the configured port while the process moved elsewhere. Standardize the deployed application on one port, configure Nginx to match, and change production startup to fail closed if that configured port is unavailable. This is a reliability and safe-deployment issue rather than an immediate remote-execution vulnerability.
+The checked-in helper and runbook previously used **port 3000** and a KEIRA host example, while earlier operational notes referenced **port 3210** and `portal.xinus.one`. The server could also silently select the next available port if its preferred port was busy. Release II remediation now standardizes the checked-in production path on `127.0.0.1:3210`, makes the production server fail rather than choosing a fallback port, rate-limits authentication endpoints in the generated Nginx site, and aligns the guide to `portal.xinus.one`. A standalone production smoke test verified HTTP 200 and the expected CSP, frame-denial, and referrer-policy headers.
 
 ## Recommended upgrade tiers
 
@@ -93,10 +93,10 @@ The Tier 3 evaluated quality system is the route to meaningful competitive progr
 
 ## Verification and remediation sequence
 
-1. Upgrade or remove the dependencies identified by `pnpm audit --prod`; do not use a blind force-upgrade.
-2. Run `pnpm test`, `pnpm check`, `pnpm build`, `bash -n deploy-lightsail.sh`, and `pnpm audit --prod --audit-level=moderate`.
-3. Add production edge controls: rate limiting, CSP, HSTS after TLS, exact loopback port binding, and firewall rules for only ports 80/443.
-4. Regenerate and review migrations, then apply them on the production RDS only after the release passes locally.
+1. Keep `pnpm audit --prod --audit-level=moderate` in the release gate; the current result is clean.
+2. Run `pnpm test`, `pnpm check`, `pnpm build`, and `bash -n deploy-lightsail.sh` after every dependency or runtime change.
+3. Apply the included production edge controls on Lightsail, then validate Nginx syntax, TLS/HSTS after Certbot, and firewall rules for only ports 80/443.
+4. Apply only reviewed, committed migrations on production RDS after the release passes locally.
 5. Update the Lightsail checkout to the audited commit, configure `.env` directly on the instance, and verify health locally before DNS or TLS activation.
 
 ## References
