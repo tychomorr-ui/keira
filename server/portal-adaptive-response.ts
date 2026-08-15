@@ -5,7 +5,6 @@
  * strategy-specific approaches, and learning memory updates.
  */
 
-import { invokeLLM } from "./_core/llm";
 import { invokeBedrock, isBedrockConfigured } from "./bedrock-gateway";
 import type { UserContext } from "./portal-context-retrieval";
 import { formatContextForLLM } from "./portal-context-retrieval";
@@ -20,7 +19,7 @@ export interface AdaptiveResponse {
     patternsActivated: string[];
     breakthroughIndicators: string[];
     nextSuggestedAction: string;
-    provider: "bedrock" | "built-in" | "fallback";
+    provider: "bedrock" | "unavailable";
     modelId?: string;
     learningMemoryUpdates: {
       corePatterns?: string[];
@@ -48,11 +47,9 @@ export async function generateAdaptiveResponse(
     // Build message history with context injection
     const messages = buildMessageHistory(userMessage, recentMessages, context, strategy);
 
-    // Prefer the user-owned Bedrock gateway when configured. If AWS credentials,
-    // regional access, or a model profile are unavailable, preserve the existing
-    // response path so the Portal remains usable during configuration.
+    // Portal's sovereign runtime speaks only through the owner-controlled Bedrock gateway.
     let portalResponse: string;
-    let provider: AdaptiveResponse["metadata"]["provider"] = "built-in";
+    let provider: AdaptiveResponse["metadata"]["provider"] = "unavailable";
     let modelId: string | undefined;
 
     if (isBedrockConfigured()) {
@@ -68,26 +65,11 @@ export async function generateAdaptiveResponse(
         provider = "bedrock";
         modelId = bedrockResponse.modelId;
       } catch (bedrockError) {
-        console.warn("[Portal Adaptive Response] Bedrock failed; using built-in fallback", bedrockError);
-        const fallbackResponse = await invokeLLM({
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages,
-          ],
-        });
-        const fallbackContent = fallbackResponse.choices[0]?.message?.content;
-        portalResponse = typeof fallbackContent === "string" ? fallbackContent : "The sovereign dialogue channel remains open. State your premise.";
-        provider = "fallback";
+        console.error("[Portal Adaptive Response] Bedrock request failed", bedrockError);
+        portalResponse = "Portal's Bedrock channel is unavailable. Verify the configured region, model access, and bearer token, then retry.";
       }
     } else {
-      const response = await invokeLLM({
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-      });
-      const responseContent = response.choices[0]?.message?.content;
-      portalResponse = typeof responseContent === "string" ? responseContent : "The sovereign dialogue channel remains open. State your premise.";
+      portalResponse = "Portal's Bedrock channel is not configured. Add a region, a valid model or inference-profile ID, and a Bedrock bearer token or IAM role.";
     }
 
     // Extract learning updates from response

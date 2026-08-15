@@ -157,3 +157,9 @@
 - [x] Conduct full security, API, and dependency audit, documenting findings in `SECURITY_AUDIT.md`
 - [x] Run strict TypeScript compilation and pass all 113 Vitest regression tests successfully
 - [x] Prepare step-by-step AWS Lightsail deployment guidance for autonomous self-hosted operation
+
+## Deep Runtime Audit & Verified AWS Lightsail Deployment
+- [x] Audit Bedrock authentication compatibility, document model-access verification prerequisites, and enumerate all production environment requirements
+- [x] Audit all self-hosting blockers and replace or document any Manus-managed runtime dependency
+- [x] Produce and verify an executable production deployment path for the Lightsail Ubuntu instance
+- [ ] Walk through the AWS deployment one verified console action at a time

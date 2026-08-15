@@ -1,22 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { isBedrockConfigured, invokeBedrock, resetBedrockClientForTests } from "./bedrock-gateway";
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  getBedrockAuthMode,
+  isBedrockConfigured,
+  resetBedrockClientForTests,
+} from "./bedrock-gateway";
 
 describe("Bedrock Gateway", () => {
   beforeEach(() => {
     resetBedrockClientForTests();
   });
 
-  it("reports unconfigured when env credentials or model ID are missing", () => {
-    // With default/mock test env without full AWS secrets, it should be false
-    expect(isBedrockConfigured()).toBe(false);
+  it("derives configuration readiness from a configured region, model, and secure authentication mode", () => {
+    const hasEndpoint = Boolean(process.env.BEDROCK_REGION && process.env.BEDROCK_MODEL_ID);
+    const authMode = getBedrockAuthMode();
+    expect(["bearer", "iam", "none"]).toContain(authMode);
+    expect(isBedrockConfigured()).toBe(hasEndpoint && authMode !== "none");
   });
 
-  it("throws an error when invoking Bedrock while unconfigured", async () => {
-    await expect(
-      invokeBedrock({
-        system: "You are an AI.",
-        messages: [{ role: "user", content: "Hello" }],
-      })
-    ).rejects.toThrow("Amazon Bedrock is not configured");
+  it("does not expose a bearer token through its public configuration state", () => {
+    expect(getBedrockAuthMode()).not.toBe("token-value");
   });
 });

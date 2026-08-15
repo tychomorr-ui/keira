@@ -1,183 +1,114 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# Sovereign Truth Portal Chat - AWS Lightsail Deployment Script
-# Deploy to: 18.138.160.99 (Singapore)
-# Domain: portal.nexinus.net
-# OS: Ubuntu 24.04
+# Run from the Lightsail browser console as a sudo-capable Ubuntu user.
+# Before first use, copy .env.example to .env and fill in every required value.
 
-set -e
+APP_DIR="${APP_DIR:-/opt/portal}"
+REPO_URL="${REPO_URL:-https://github.com/tychomorr-ui/cosmic-net.git}"
+BRANCH="${BRANCH:-main}"
+PORTAL_DOMAIN="${PORTAL_DOMAIN:-portal.xinus.one}"
+APP_PORT="${APP_PORT:-3000}"
 
-echo "=================================================="
-echo "Sovereign Truth Portal Chat - Lightsail Deploy"
-echo "=================================================="
-echo ""
+required_environment_variables=(
+  DATABASE_URL
+  JWT_SECRET
+  PORTAL_OWNER_ACCESS_TOKEN
+  BEDROCK_API_KEY
+  BEDROCK_REGION
+  BEDROCK_MODEL_ID
+  PORTAL_S3_BUCKET
+  PORTAL_S3_REGION
+)
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Step 1: Update system
-echo -e "${YELLOW}[1/13] Updating system packages...${NC}"
-apt update
-apt upgrade -y
-apt install -y curl wget git build-essential
-
-# Step 2: Install Node.js and pnpm
-echo -e "${YELLOW}[2/13] Installing Node.js and pnpm...${NC}"
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-apt install -y nodejs
-npm install -g pnpm
-
-# Step 3: Install MySQL
-echo -e "${YELLOW}[3/13] Installing MySQL 8.0...${NC}"
-apt install -y mysql-server
-systemctl start mysql
-systemctl enable mysql
-
-# Step 4: Install Nginx
-echo -e "${YELLOW}[4/13] Installing Nginx...${NC}"
-apt install -y nginx
-systemctl start nginx
-systemctl enable nginx
-
-# Step 5: Install Certbot for SSL
-echo -e "${YELLOW}[5/13] Installing Certbot for SSL certificates...${NC}"
-apt install -y certbot python3-certbot-nginx
-
-# Step 6: Clone repository
-echo -e "${YELLOW}[6/13] Cloning Sovereign Truth Portal Chat repository...${NC}"
-cd /opt
-git clone https://github.com/tychomorr-ui/sovereign-truth-engine.git
-cd sovereign-truth-engine
-
-# Step 7: Install dependencies
-echo -e "${YELLOW}[7/13] Installing Node.js dependencies...${NC}"
-pnpm install
-
-# Step 8: Create .env file
-echo -e "${YELLOW}[8/13] Creating .env file (you must fill in secrets)...${NC}"
-cat > .env.local << 'EOF'
-# Database
-DATABASE_URL=mysql://root:CHANGE_ME@localhost:3306/sovereign_truth
-
-# JWT
-JWT_SECRET=CHANGE_ME_TO_RANDOM_STRING
-
-# Manus OAuth
-VITE_APP_ID=CHANGE_ME
-OAUTH_SERVER_URL=https://api.manus.im
-VITE_OAUTH_PORTAL_URL=https://oauth.manus.im
-
-# Stripe
-STRIPE_SECRET_KEY=sk_test_CHANGE_ME
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_CHANGE_ME
-STRIPE_WEBHOOK_SECRET=whsec_CHANGE_ME
-
-# Manus Built-in APIs
-BUILT_IN_FORGE_API_URL=https://api.manus.im
-BUILT_IN_FORGE_API_KEY=CHANGE_ME
-VITE_FRONTEND_FORGE_API_URL=https://api.manus.im
-VITE_FRONTEND_FORGE_API_KEY=CHANGE_ME
-
-# Owner info
-OWNER_OPEN_ID=CHANGE_ME
-OWNER_NAME=CHANGE_ME
-
-# App config
-VITE_APP_TITLE=Sovereign Truth Portal
+require_env_file() {
+  if [[ ! -f .env ]]; then
+    cat > .env <<'ENVIRONMENT'
 NODE_ENV=production
-EOF
+PORT=3000
+DATABASE_URL=mysql://portal_user:replace-with-password@replace-with-rds-endpoint:3306/portal_db
+JWT_SECRET=replace-with-a-long-random-secret
+PORTAL_OWNER_ACCESS_TOKEN=replace-with-a-long-random-owner-token
+BEDROCK_API_KEY=replace-with-bedrock-bearer-token
+BEDROCK_REGION=sa-east-1
+BEDROCK_MODEL_ID=anthropic.claude-opus-5
+BEDROCK_MAX_TOKENS=4096
+BEDROCK_TEMPERATURE=0.1
+BEDROCK_TOP_P=0.9
+BEDROCK_TIMEOUT_MS=60000
+PORTAL_S3_BUCKET=replace-with-an-s3-bucket-name
+PORTAL_S3_REGION=sa-east-1
+ENVIRONMENT
+    chmod 600 .env
+    echo "Created $APP_DIR/.env. Fill it with real secrets, then rerun this script."
+    exit 1
+  fi
 
-echo -e "${RED}⚠️  IMPORTANT: Edit .env.local and fill in all CHANGE_ME values${NC}"
-echo "Location: /opt/sovereign-truth-engine/.env.local"
-echo ""
+  for key in "${required_environment_variables[@]}"; do
+    value="$(grep -E "^${key}=" .env | tail -n 1 | cut -d= -f2- || true)"
+    if [[ -z "$value" || "$value" == *"replace-with"* || "$value" == "CHANGE_ME" ]]; then
+      echo "Missing required production environment variable: ${key}"
+      exit 1
+    fi
+  done
+}
 
-# Step 9: Create database
-echo -e "${YELLOW}[9/13] Creating MySQL database...${NC}"
-mysql -u root << 'EOF'
-CREATE DATABASE IF NOT EXISTS sovereign_truth;
-USE sovereign_truth;
-EOF
+echo "Installing base packages and Node.js 22..."
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl git build-essential nginx certbot python3-certbot-nginx
+if ! command -v node >/dev/null 2>&1 || [[ "$(node -p 'process.versions.node.split(`.`)[0]')" -lt 22 ]]; then
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+fi
+sudo npm install -g pnpm pm2
 
-# Step 10: Build application
-echo -e "${YELLOW}[10/13] Building application...${NC}"
+echo "Retrieving the audited Portal source..."
+if [[ -d "$APP_DIR/.git" ]]; then
+  sudo git -C "$APP_DIR" fetch origin "$BRANCH"
+  sudo git -C "$APP_DIR" checkout "$BRANCH"
+  sudo git -C "$APP_DIR" pull --ff-only origin "$BRANCH"
+else
+  sudo git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
+fi
+sudo chown -R "$(id -u):$(id -g)" "$APP_DIR"
+cd "$APP_DIR"
+
+require_env_file
+
+echo "Installing, migrating, and building Portal..."
+pnpm install --frozen-lockfile
+pnpm db:push
 pnpm build
 
-# Step 11: Install PM2
-echo -e "${YELLOW}[11/13] Installing PM2 process manager...${NC}"
-npm install -g pm2
-pm2 install pm2-auto-pull
+echo "Starting Portal through PM2..."
+pm2 delete portal-sovereign 2>/dev/null || true
+pm2 start dist/index.js --name portal-sovereign --cwd "$APP_DIR" --update-env
+pm2 save
 
-# Step 12: Configure Nginx reverse proxy
-echo -e "${YELLOW}[12/13] Configuring Nginx reverse proxy...${NC}"
-cat > /etc/nginx/sites-available/portal.nexinus.net << 'EOF'
-upstream portal_backend {
-    server 127.0.0.1:3000;
-}
-
+echo "Configuring the Nginx reverse proxy..."
+sudo tee /etc/nginx/sites-available/portal >/dev/null <<NGINX
 server {
     listen 80;
-    server_name portal.nexinus.net;
+    server_name ${PORTAL_DOMAIN};
 
     location / {
-        proxy_pass http://portal_backend;
+        proxy_pass http://127.0.0.1:${APP_PORT};
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
 }
-EOF
+NGINX
+sudo ln -sfn /etc/nginx/sites-available/portal /etc/nginx/sites-enabled/portal
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t
+sudo systemctl reload nginx
 
-ln -sf /etc/nginx/sites-available/portal.nexinus.net /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-nginx -t
-systemctl reload nginx
-
-# Step 13: Setup SSL certificate
-echo -e "${YELLOW}[13/13] Setting up SSL certificate with Let's Encrypt...${NC}"
-echo -e "${YELLOW}Make sure your domain (portal.nexinus.net) DNS is already pointing to 18.138.160.99${NC}"
-read -p "Press Enter to continue with SSL setup (or Ctrl+C to skip)..."
-certbot --nginx -d portal.nexinus.net --non-interactive --agree-tos -m admin@nexinus.net
-
-# Start application with PM2
-echo -e "${GREEN}Starting application with PM2...${NC}"
-cd /opt/sovereign-truth-engine
-pm2 start "pnpm dev" --name "portal-chat" --env production
-pm2 save
-pm2 startup
-
-echo ""
-echo -e "${GREEN}=================================================="
-echo "✅ Deployment Complete!"
-echo "==================================================${NC}"
-echo ""
-echo "📋 Next Steps:"
-echo "1. Edit .env.local with your actual secrets:"
-echo "   nano /opt/sovereign-truth-engine/.env.local"
-echo ""
-echo "2. Update your DNS records:"
-echo "   portal.nexinus.net A record → 18.138.160.99"
-echo ""
-echo "3. Restart the application:"
-echo "   cd /opt/sovereign-truth-engine"
-echo "   pm2 restart portal-chat"
-echo ""
-echo "4. View logs:"
-echo "   pm2 logs portal-chat"
-echo ""
-echo "5. Access your Portal:"
-echo "   https://portal.nexinus.net"
-echo ""
-echo "📚 Useful Commands:"
-echo "   pm2 status              - Check app status"
-echo "   pm2 logs portal-chat    - View application logs"
-echo "   pm2 restart portal-chat - Restart application"
-echo "   pm2 stop portal-chat    - Stop application"
-echo ""
+echo
+echo "Portal is running locally at http://127.0.0.1:${APP_PORT}."
+echo "Verify with: curl -I http://127.0.0.1:${APP_PORT}/ && pm2 logs portal-sovereign --lines 50"
+echo "After the DNS A record for ${PORTAL_DOMAIN} points to this instance, issue TLS with:"
+echo "  sudo certbot --nginx -d ${PORTAL_DOMAIN}"
+echo "For startup after reboots, run the command printed by: pm2 startup"

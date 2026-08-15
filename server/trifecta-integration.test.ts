@@ -4,7 +4,23 @@
  * End-to-end tests for the complete Trifecta system.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+vi.mock("./_core/llm", () => ({
+  invokeLLM: vi.fn(async () => ({
+    id: "test-bedrock-response",
+    created: 0,
+    model: "test-model",
+    choices: [{
+      index: 0,
+      message: {
+        role: "assistant",
+        content: "A coherent synthesis connects the supplied evidence without adding unsupported claims.",
+      },
+      finish_reason: "stop",
+    }],
+  })),
+}));
 import { createPersonalityManifesto, generatePersonalitySystemPrompt } from "./trifecta-personality-core";
 import { createOrchestrationStrategy, orchestratePillars } from "./trifecta-orchestration";
 import { createTruthFilterCriteria, synthesizeResponses } from "./trifecta-truth-filter";
