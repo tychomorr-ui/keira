@@ -69,7 +69,7 @@ The Express server sets useful baseline headers, but a production TLS configurat
 
 ### Deployment configuration drift — Remediated
 
-The checked-in helper and runbook previously used **port 3000** and a KEIRA host example, while earlier operational notes referenced **port 3210** and `portal.xinus.one`. The server could also silently select the next available port if its preferred port was busy. Release II remediation now standardizes the checked-in production path on `127.0.0.1:3210`, makes the production server fail rather than choosing a fallback port, rate-limits authentication endpoints in the generated Nginx site, and aligns the guide to `portal.xinus.one`. A standalone production smoke test verified HTTP 200 and the expected CSP, frame-denial, and referrer-policy headers.
+The checked-in helper and runbook previously used **port 3000** and a KEIRA host example, while earlier operational notes referenced **port 3210** and `portal.xinus.one`. The server could also silently select the next available port if its preferred port was busy. Release II remediation now standardizes the checked-in production path on `127.0.0.1:3210`, makes the production server fail rather than choosing a fallback port, rate-limits authentication endpoints in the generated Nginx site, and aligns the guide to the finalized hostname `keira.xinus.one`. A standalone production smoke test verified HTTP 200 and the expected CSP, frame-denial, and referrer-policy headers.
 
 ## Recommended upgrade tiers
 

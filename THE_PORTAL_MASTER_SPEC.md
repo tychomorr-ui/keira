@@ -1,5 +1,7 @@
 # The Portal: Master Architectural & Deployment Specification
 
+> **Superseded deployment identity.** This document records an earlier Portal concept. The active product is **KEIRA**, the dedicated intelligence node, with the finalized São Paulo hostname [`keira.xinus.one`](https://keira.xinus.one).
+
 ## 1. Product Naming & Domain Identity
 
 The application is designated as **The Portal** (formally styled with the definite article for gravitas and distinct identity). The production domain routing is established as **`portal.xinus.one`**, anchoring the application within your sovereign network infrastructure alongside `exinus.one`, `universaltruth.life`, and the network overlays.

@@ -172,6 +172,7 @@
 ## KEIRA Identity
 - [ ] Confirm KEIRA naming conventions and align the dedicated repository, user-facing branding, and São Paulo deployment
 - [x] Preserve KEIRA as the dedicated intelligence node while documenting its distinct naming lineage from Tesseract-A’s KEIRA$KHAOS mode
+- [ ] Align the deployed Nginx site, deployment documentation, DNS record, and TLS certificate with the finalized hostname `keira.xinus.one`
 
 ## KEIRA Informative-First Conversation Correction
 - [x] Replace default combative or psychologizing replies with intent-sensitive, informative-first responses
@@ -209,3 +210,4 @@
 - [x] Implement and validate source-level Lightsail hardening with an exact loopback port, rate limits, CSP/HSTS, and a deployment guide aligned to the final KEIRA host and port
 - [x] Repair the Express 5 static-route regression detected during dependency remediation and validate the standalone production-server smoke test
 - [ ] Apply the updated Nginx configuration, fixed port `3210`, authentication rate limits, and TLS/HSTS configuration on the São Paulo Lightsail instance, then verify local and public headers
+- [ ] Authorize the São Paulo Lightsail instance to reach the `portal-db-01` RDS endpoint on MySQL port `3306`, then verify the production database connection

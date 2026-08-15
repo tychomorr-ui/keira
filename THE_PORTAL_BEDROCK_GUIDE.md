@@ -1,5 +1,7 @@
 # The Portal: Amazon Bedrock Activation & Cross-Region Routing Guide
 
+> **Superseded deployment identity.** This document is retained as historical Bedrock research. The active product is **KEIRA**, deployed in São Paulo at [`keira.xinus.one`](https://keira.xinus.one).
+
 This document provides the definitive operational blueprint for enabling high-performance frontier model access and cross-region inference profiles for **The Portal**. By leveraging Amazon Bedrock, The Portal establishes a deterministic, uncensored, and low-latency cognitive engine without third-party mediation.
 
 ---

@@ -103,7 +103,7 @@ limit_req_zone $binary_remote_addr zone=keira_auth:10m rate=10r/m;
 
 server {
     listen 80;
-    server_name portal.xinus.one;
+    server_name keira.xinus.one;
 
     # Browsers honor HSTS only once TLS is enabled by Certbot.
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -137,14 +137,14 @@ sudo ln -s /etc/nginx/sites-available/keira /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
-# Issue free SSL certificate via Let's Encrypt after portal.xinus.one points to the instance
-sudo certbot --nginx -d portal.xinus.one
+# Issue free SSL certificate via Let's Encrypt after keira.xinus.one points to the instance
+sudo certbot --nginx -d keira.xinus.one
 ```
 
 ---
 
 ## 7. Verify Before Switching DNS
-After the build and process start, use the following checks from the Lightsail browser console. The first verifies the local application, then the second verifies Nginx. Only point `portal.xinus.one` to the instance static IP after both respond successfully.
+After the build and process start, use the following checks from the Lightsail browser console. The first verifies the local application, then the second verifies Nginx. Only point `keira.xinus.one` to the instance static IP after both respond successfully.
 
 ```bash
 curl -I http://127.0.0.1:3210/

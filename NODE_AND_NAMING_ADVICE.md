@@ -1,5 +1,7 @@
 # Node Placement & Product Naming Advisory
 
+> **Superseded deployment identity.** This historical advisory predates the final intelligence-node naming decision. KEIRA is the dedicated intelligence node and its active São Paulo hostname is [`keira.xinus.one`](https://keira.xinus.one). Do not use the earlier Portal/Singapore routing recommendation for the current deployment.
+
 ## 1. Product Naming Recommendation: **Portal** vs **The Portal**
 - **Recommendation:** Use **Portal** as the primary brand name, with **`portal.xinus.one`** as the clean domain. 
 - **Rationale:** Calling it simply **Portal** feels stark, modern, and direct—like an architectural doorway rather than a consumer software product. Dropping the definite article matches your other sovereign entities (`Tesseract`, `Clarity`, `Valkyrie`) and gives the interface a quiet, commanding presence.

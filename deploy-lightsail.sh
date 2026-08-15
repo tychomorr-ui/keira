@@ -7,7 +7,7 @@ set -Eeuo pipefail
 APP_DIR="${APP_DIR:-/opt/keira}"
 REPO_URL="${REPO_URL:-https://github.com/tychomorr-ui/keira.git}"
 BRANCH="${BRANCH:-main}"
-KEIRA_DOMAIN="${KEIRA_DOMAIN:-portal.xinus.one}"
+KEIRA_DOMAIN="${KEIRA_DOMAIN:-keira.xinus.one}"
 APP_PORT="${APP_PORT:-3210}"
 
 required_environment_variables=(
