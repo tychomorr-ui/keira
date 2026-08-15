@@ -152,3 +152,8 @@
 - [x] Configure Bedrock region `sa-east-1` and model `anthropic.claude-opus-5` with secure API key
 - [x] Integrate AWS RDS database and Secrets Manager (`portal-db-01`) references
 - [x] Run strict TypeScript compilation and pass all 112 Vitest tests successfully
+
+## Comprehensive Security Audit & Step-by-Step Lightsail Deployment
+- [x] Conduct full security, API, and dependency audit, documenting findings in `SECURITY_AUDIT.md`
+- [x] Run strict TypeScript compilation and pass all 113 Vitest regression tests successfully
+- [x] Prepare step-by-step AWS Lightsail deployment guidance for autonomous self-hosted operation
