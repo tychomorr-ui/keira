@@ -110,10 +110,11 @@ export const appRouter = router({
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid owner access token." });
         }
 
-        const owner = await db.getUserByName("Tyler Morris")
+        const existingOwner = await db.getUserByName("Tyler Morris")
           ?? await db.getUserByEmail("tycole716@gmail.com")
           ?? await db.getUserByEmail("tychomorr@gmail.com");
-        if (!owner) throw new TRPCError({ code: "NOT_FOUND", message: "Owner account is not provisioned." });
+        const owner = existingOwner ?? await db.provisionInitialKeiraOwner();
+        if (!owner) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Owner session could not be created." });
 
         const promoted = await db.promoteUserToOwner(owner.id);
         if (!promoted) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Owner session could not be created." });

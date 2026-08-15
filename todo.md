@@ -228,3 +228,8 @@
 - [ ] Replace the public owner-entry heading with neutral Portal wording while retaining KEIRA as the intelligence identity
 - [ ] Add a protected owner-access-key reset path so Tyler can choose a new key without chat exposure or repository storage
 - [ ] Validate owner-entry success and invalid-key handling, publish the repair, and apply the rotated key on São Paulo
+
+## KEIRA São Paulo First-Owner Provisioning
+- [ ] Extend the protected owner-key flow to provision Tyler Morris as the initial RDS owner when no owner account exists
+- [ ] Preserve existing owner bootstrap behavior and reject invalid keys without revealing account state
+- [ ] Validate, publish, and deploy the provisioning repair so owner entry works against the fresh São Paulo database

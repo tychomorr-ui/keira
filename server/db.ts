@@ -128,6 +128,30 @@ export async function createSovereignUser(input: {
   return getUserByEmail(email);
 }
 
+/**
+ * Creates the fixed KEIRA operator identity only when a fresh deployment has
+ * no matching owner account. Caller must validate the private owner key first.
+ */
+export async function provisionInitialKeiraOwner() {
+  const existing = await getUserByName("Tyler Morris")
+    ?? await getUserByEmail("tycole716@gmail.com")
+    ?? await getUserByEmail("tychomorr@gmail.com");
+  if (existing) return existing;
+
+  const database = await getDb();
+  if (!database) throw new Error("Database is not available");
+
+  await database.insert(users).values({
+    name: "Tyler Morris",
+    email: "tycole716@gmail.com",
+    loginMethod: "owner-key",
+    role: "admin",
+    lastSignedIn: new Date(),
+  });
+
+  return getUserByEmail("tycole716@gmail.com");
+}
+
 export async function setSovereignCredentials(input: {
   userId: number;
   email: string;
