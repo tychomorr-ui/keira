@@ -22,6 +22,11 @@ import {
 } from "./cmap-portal-integration";
 import { updateMissionState, type MissionState } from "./cmap-handshake";
 import { getKeiraCapabilities } from "./keira-capabilities";
+import {
+  getCarryoverMessageLimit,
+  resolveContextCarryover,
+  resolveResponseObjective,
+} from "./keira-response-controls";
 
 const cmapSessions = new Map<number, MissionState>(); // Keyed by conversationId
 
@@ -54,6 +59,35 @@ export const portalChatRouter = router({
     .mutation(async ({ ctx, input }) => {
       await portalChat.deleteContextEntry(ctx.user.id, input.entryId);
       return { ok: true };
+    }),
+
+  searchConversationRecall: protectedProcedure
+    .input(z.object({ query: z.string().trim().min(2).max(120), limit: z.number().int().min(1).max(12).default(6) }))
+    .query(async ({ ctx, input }) => {
+      const matches = await portalChat.searchConversationRecall(ctx.user.id, input.query, input.limit);
+      return {
+        source: "operator-owned stored dialogue" as const,
+        matches,
+      };
+    }),
+
+  promoteRecallToContextLedger: protectedProcedure
+    .input(z.object({
+      messageId: z.number().int().positive(),
+      label: z.string().trim().min(1).max(120),
+      kind: z.enum(["fact", "preference", "goal", "note"]),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const message = await portalChat.getRecallMessageForUser(ctx.user.id, input.messageId);
+      if (!message) throw new Error("Stored dialogue message not found or unauthorized");
+
+      const content = message.content.slice(0, 4000);
+      const entryId = await portalChat.createContextEntry(ctx.user.id, {
+        label: input.label,
+        content,
+        kind: input.kind,
+      });
+      return { entryId, truncated: message.content.length > content.length };
     }),
 
   getConversations: protectedProcedure.query(async ({ ctx }) => {
@@ -118,6 +152,8 @@ export const portalChatRouter = router({
         customInstructions: userRecord[0].customInstructions,
         modelTemperature: userRecord[0].modelTemperature,
         predictiveSensitivity: userRecord[0].predictiveSensitivity,
+        responseObjective: userRecord[0].responseObjective,
+        contextCarryover: userRecord[0].contextCarryover,
       };
       const contextLedger = await portalChat.getContextEntries(ctx.user.id);
       (userContext as any).contextLedger = contextLedger
@@ -132,7 +168,11 @@ export const portalChatRouter = router({
 
       // Get conversation history for context
       const conversationResult = await portalChat.getConversation(conversationId, ctx.user.id);
-      const recentMessages = conversationResult.messages.slice(-6).map((msg) => ({
+      const carryoverPolicy = resolveContextCarryover(userRecord[0].contextCarryover);
+      const carryoverMessageLimit = getCarryoverMessageLimit(carryoverPolicy);
+      // The just-persisted operator message is supplied separately to the model.
+      // Excluding it here prevents duplicate current-turn input.
+      const recentMessages = conversationResult.messages.slice(0, -1).slice(-carryoverMessageLimit).map((msg) => ({
         role: msg.role as 'user' | 'portal',
         content: msg.content,
       }));
@@ -183,6 +223,10 @@ export const portalChatRouter = router({
           nextAction: adaptiveResponse.metadata.nextSuggestedAction,
           provider: adaptiveResponse.metadata.provider,
           modelId: adaptiveResponse.metadata.modelId,
+          responseObjective: resolveResponseObjective(userRecord[0].responseObjective),
+          contextCarryover: carryoverPolicy,
+          carryoverMessages: adaptiveResponse.metadata.carryoverMessageCount,
+          qualityContract: adaptiveResponse.metadata.qualityContract,
           latencyMs,
           cmap: {
             sessionId: missionState.sessionId,

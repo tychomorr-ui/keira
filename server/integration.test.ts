@@ -11,6 +11,8 @@ describe("Portal-only API surface", () => {
     expect(procedures).toContain("portal.chat.addContextLedgerEntry");
     expect(procedures).toContain("portal.chat.setContextLedgerEntryActive");
     expect(procedures).toContain("portal.chat.deleteContextLedgerEntry");
+    expect(procedures).toContain("portal.chat.searchConversationRecall");
+    expect(procedures).toContain("portal.chat.promoteRecallToContextLedger");
   });
 
   it("does not mount legacy Mirror, knowledge graph, subscription, or platform-system procedures", () => {

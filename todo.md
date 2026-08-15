@@ -192,3 +192,11 @@
 - [x] Add operator-owned context-ledger entries with list, create, delete, and active-context endpoints
 - [x] Apply saved response calibration to the actual Bedrock inference request and expose its active non-sensitive state
 - [x] Add operator-visible research and realtime-voice readiness states without claiming unconfigured providers are active
+
+## KEIRA Compound Competitiveness Release II
+- [x] Add an operator-selectable response objective that changes the real Bedrock instruction contract for direct answer, deep analysis, creative exploration, and implementation planning
+- [x] Add inspectable conversation carryover controls so the operator can choose how much recent dialogue enters the next inference without hidden memory claims
+- [x] Add a searchable, operator-owned conversation recall surface that finds matching prior dialogue locally and allows explicit context promotion into the ledger
+- [x] Add an answer-quality contract that presents verified capability state, uncertainty boundaries, and concrete next steps without fabricating citations or live research
+- [x] Add regression coverage for response-objective routing, context-carryover limits, and explicit recall-to-ledger promotion
+- [x] Run the complete test suite, strict TypeScript check, production build, and deployment-script validation before publication

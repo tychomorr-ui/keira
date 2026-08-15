@@ -28,6 +28,8 @@ export const users = mysqlTable("users", {
   customInstructions: text("customInstructions"),
   modelTemperature: int("modelTemperature").default(20).notNull(), // stored as integer e.g. 20 -> 0.2
   predictiveSensitivity: int("predictiveSensitivity").default(75).notNull(),
+  responseObjective: mysqlEnum("responseObjective", ["direct", "analysis", "creative", "plan"]).default("direct").notNull(),
+  contextCarryover: mysqlEnum("contextCarryover", ["minimal", "standard", "extended"]).default("standard").notNull(),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

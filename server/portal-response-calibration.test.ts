@@ -47,4 +47,19 @@ describe("KEIRA response calibration", () => {
     expect(request.temperature).toBe(0.1);
     expect(request.topP).toBeCloseTo(0.82, 8);
   });
+
+  it("applies the saved response objective and quality boundaries to the live Bedrock system contract", async () => {
+    const planContext = {
+      ...context,
+      profile: { predictiveSensitivity: 75, responseObjective: "plan" },
+    };
+
+    const response = await generateAdaptiveResponse("Plan the release.", planContext as any, informativeStrategy, []);
+
+    const request = invokeBedrockMock.mock.calls[0][0];
+    expect(request.system).toContain("OPERATOR-SELECTED RESPONSE OBJECTIVE: PLAN");
+    expect(request.system).toContain("executable sequence");
+    expect(request.system).toContain("Never invent citations");
+    expect(response.metadata.responseObjective).toBe("plan");
+  });
 });

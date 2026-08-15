@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { and, desc, eq, like } from "drizzle-orm";
 import { getDb } from "./db";
 import {
   portalConversations,
@@ -235,4 +235,53 @@ export async function deleteContextEntry(userId: number, entryId: number) {
   }
 
   await db.delete(keiraContextEntries).where(eq(keiraContextEntries.id, entryId));
+}
+
+function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
+}
+
+/**
+ * Returns only the authenticated operator's own stored dialogue. This is an
+ * explicit local recall feature, not hidden semantic memory or web research.
+ */
+export async function searchConversationRecall(userId: number, query: string, limit = 6) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const escapedQuery = escapeLikePattern(query.trim());
+  if (!escapedQuery) return [];
+
+  return await db
+    .select({
+      id: portalChatMessages.id,
+      conversationId: portalChatMessages.conversationId,
+      role: portalChatMessages.role,
+      content: portalChatMessages.content,
+      createdAt: portalChatMessages.createdAt,
+    })
+    .from(portalChatMessages)
+    .where(and(
+      eq(portalChatMessages.userId, userId),
+      like(portalChatMessages.content, `%${escapedQuery}%`),
+    ))
+    .orderBy(desc(portalChatMessages.createdAt))
+    .limit(limit);
+}
+
+export async function getRecallMessageForUser(userId: number, messageId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db
+    .select({
+      id: portalChatMessages.id,
+      content: portalChatMessages.content,
+      role: portalChatMessages.role,
+    })
+    .from(portalChatMessages)
+    .where(and(eq(portalChatMessages.id, messageId), eq(portalChatMessages.userId, userId)))
+    .limit(1);
+
+  return result[0];
 }

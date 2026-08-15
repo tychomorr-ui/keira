@@ -93,6 +93,8 @@ export const appRouter = router({
         customInstructions: z.string().trim().max(2000).nullable().optional(),
         modelTemperature: z.number().int().min(0).max(100).optional(),
         predictiveSensitivity: z.number().int().min(0).max(100).optional(),
+        responseObjective: z.enum(["direct", "analysis", "creative", "plan"]).optional(),
+        contextCarryover: z.enum(["minimal", "standard", "extended"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const updated = await db.updateUserProfile(ctx.user.id, input);

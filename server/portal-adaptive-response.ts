@@ -11,6 +11,11 @@ import { formatContextForLLM } from "./portal-context-retrieval";
 import type { StrategySelection, DialogueStrategy } from "./portal-strategy-selector";
 import { getStrategySystemPrompt, formatContextForStrategy } from "./portal-strategy-selector";
 import type { PortalChatMessage } from "../drizzle/schema";
+import {
+  getResponseObjectiveContract,
+  resolveResponseObjective,
+  type ResponseObjective,
+} from "./keira-response-controls";
 
 export interface AdaptiveResponse {
   strategy: DialogueStrategy;
@@ -21,6 +26,9 @@ export interface AdaptiveResponse {
     nextSuggestedAction: string;
     provider: "bedrock" | "unavailable";
     modelId?: string;
+    responseObjective: ResponseObjective;
+    carryoverMessageCount: number;
+    qualityContract: string;
     learningMemoryUpdates: {
       corePatterns?: string[];
       growthAreas?: string[];
@@ -86,6 +94,9 @@ export async function generateAdaptiveResponse(
       metadata: {
         provider,
         modelId,
+        responseObjective: resolveResponseObjective((context as any).profile?.responseObjective),
+        carryoverMessageCount: recentMessages.length,
+        qualityContract: "Answer quality contract active: answer scope, uncertainty boundaries, and any source limitations are explicit.",
         patternsActivated: context.learning.corePatterns.slice(0, 3),
         breakthroughIndicators: extractBreakthroughIndicators(portalResponse),
         nextSuggestedAction,
@@ -108,6 +119,7 @@ function buildSystemPrompt(context: UserContext, strategy: StrategySelection): s
   const customPersona = (context as any).profile?.customPersona;
   const customInstructions = (context as any).profile?.customInstructions;
   const predictiveSensitivity = (context as any).profile?.predictiveSensitivity ?? 75;
+  const responseObjective = resolveResponseObjective((context as any).profile?.responseObjective);
   const contextLedger = (context as any).contextLedger as Array<{ label: string; content: string; kind: string }> | undefined;
 
   lines.push(customPersona ? `You are KEIRA. The operator's requested persona is: ${customPersona}` : `You are KEIRA, a sovereign conversational intelligence node.
@@ -126,6 +138,14 @@ Your core characteristics:
   lines.push(`\nCONTEXTUAL CALIBRATION (Sensitivity: ${predictiveSensitivity}%):
 - Use patterns in the current conversation to offer relevant follow-up only when useful.
 - Do not present speculation as prediction, read hidden intent, or claim preternatural precision.`);
+
+  lines.push(`\nOPERATOR-SELECTED RESPONSE OBJECTIVE: ${responseObjective.toUpperCase()}
+${getResponseObjectiveContract(responseObjective)}
+
+ANSWER QUALITY BOUNDARIES:
+- State uncertainty, assumptions, and time-sensitivity when they could change the answer.
+- Cite only sources actually supplied by the operator or verified by a configured research capability. Never invent citations, links, retrieval results, or live information.
+- If live research is relevant but unavailable, say so plainly and offer the best bounded answer from the current conversation and model knowledge.`);
 
   lines.push("");
 

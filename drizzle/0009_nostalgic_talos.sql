@@ -1,0 +1,2 @@
+ALTER TABLE `users` ADD `responseObjective` enum('direct','analysis','creative','plan') DEFAULT 'direct' NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` ADD `contextCarryover` enum('minimal','standard','extended') DEFAULT 'standard' NOT NULL;

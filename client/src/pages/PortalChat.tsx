@@ -36,6 +36,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 type LearningStage = "awakening" | "exploration" | "integration" | "mastery" | "resistance";
 type DialogueStrategy = "informative" | "socratic" | "prophetic" | "forensic" | "catalytic";
 type MessageRole = "user" | "portal";
+type ResponseObjective = "direct" | "analysis" | "creative" | "plan";
+type ContextCarryover = "minimal" | "standard" | "extended";
 
 type PortalMessage = {
   role: MessageRole;
@@ -75,6 +77,10 @@ type MessageMetadata = {
   resistanceLevel?: number;
   stageTransition?: string | null;
   nextAction?: string;
+  responseObjective?: ResponseObjective;
+  contextCarryover?: ContextCarryover;
+  carryoverMessages?: number;
+  qualityContract?: string;
   cmap?: CmapState;
 };
 
@@ -84,6 +90,14 @@ type ContextLedgerEntry = {
   content: string;
   kind: "fact" | "preference" | "goal" | "note";
   isActive: number;
+};
+
+type RecallMatch = {
+  id: number;
+  conversationId: number;
+  role: MessageRole;
+  content: string;
+  createdAt: string | number | Date;
 };
 
 const STAGE_LABELS: Record<LearningStage, string> = {
@@ -147,6 +161,8 @@ export default function PortalChat() {
   const [ledgerLabel, setLedgerLabel] = useState("");
   const [ledgerContent, setLedgerContent] = useState("");
   const [ledgerKind, setLedgerKind] = useState<ContextLedgerEntry["kind"]>("note");
+  const [recallQuery, setRecallQuery] = useState("");
+  const [recallKind, setRecallKind] = useState<ContextLedgerEntry["kind"]>("note");
   const [voiceSupport, setVoiceSupport] = useState({ input: false, output: false });
   const [newTitle, setNewTitle] = useState("");
   const [profileDraft, setProfileDraft] = useState({
@@ -160,6 +176,8 @@ export default function PortalChat() {
     customInstructions: "",
     modelTemperature: 10,
     predictiveSensitivity: 75,
+    responseObjective: "direct" as ResponseObjective,
+    contextCarryover: "standard" as ContextCarryover,
   });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
@@ -198,6 +216,11 @@ export default function PortalChat() {
   const addContextLedgerEntryMutation = trpc.portal.chat.addContextLedgerEntry.useMutation();
   const setContextLedgerEntryActiveMutation = trpc.portal.chat.setContextLedgerEntryActive.useMutation();
   const deleteContextLedgerEntryMutation = trpc.portal.chat.deleteContextLedgerEntry.useMutation();
+  const recallQueryResult = trpc.portal.chat.searchConversationRecall.useQuery(
+    { query: recallQuery.trim(), limit: 6 },
+    { enabled: isAuthenticated && showContextPanel && recallQuery.trim().length >= 2 },
+  );
+  const promoteRecallMutation = trpc.portal.chat.promoteRecallToContextLedger.useMutation();
 
   useEffect(() => {
     if (conversationsQuery.data) {
@@ -244,6 +267,8 @@ export default function PortalChat() {
         customInstructions: user.customInstructions ?? "",
         modelTemperature: user.modelTemperature ?? 10,
         predictiveSensitivity: user.predictiveSensitivity ?? 75,
+        responseObjective: user.responseObjective ?? "direct",
+        contextCarryover: user.contextCarryover ?? "standard",
       });
     }
   }, [user?.id]);
@@ -306,6 +331,8 @@ export default function PortalChat() {
         customInstructions: profileDraft.customInstructions || null,
         modelTemperature: profileDraft.modelTemperature,
         predictiveSensitivity: profileDraft.predictiveSensitivity,
+        responseObjective: profileDraft.responseObjective,
+        contextCarryover: profileDraft.contextCarryover,
       });
       await utils.auth.me.invalidate();
       setProfileStatus("Profile signal saved.");
@@ -450,6 +477,17 @@ export default function PortalChat() {
       await contextLedgerQuery.refetch();
     } catch (error) {
       setProfileStatus(error instanceof Error ? error.message : "Context entry could not be saved.");
+    }
+  };
+
+  const handlePromoteRecall = async (match: RecallMatch) => {
+    const label = match.content.replace(/\s+/g, " ").trim().slice(0, 88) || "Promoted dialogue recall";
+    try {
+      const result = await promoteRecallMutation.mutateAsync({ messageId: match.id, label, kind: recallKind });
+      await contextLedgerQuery.refetch();
+      setProfileStatus(result.truncated ? "Recall promoted to the ledger; the source was trimmed to the ledger limit." : "Recall promoted to the active operator ledger.");
+    } catch (error) {
+      setProfileStatus(error instanceof Error ? error.message : "Recall could not be promoted to the ledger.");
     }
   };
 
@@ -825,6 +863,16 @@ export default function PortalChat() {
                       </div>
                     )) : <p className="text-xs leading-5 text-[#737b8f]">No ledger entries yet. Add only information you want KEIRA to consider across future replies.</p>}
                   </div>
+                  <div className="mt-5 border-t border-[#273865] pt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div><div className="uppercase tracking-[0.18em] text-[#8be9ff]">Local dialogue recall</div><p className="mt-1 text-xs leading-5 text-[#737b8f]">Search only your saved KEIRA dialogue. Promote a result only when you want it added to the active ledger.</p></div>
+                      <select aria-label="Recall promotion type" value={recallKind} onChange={(event) => setRecallKind(event.target.value as ContextLedgerEntry["kind"])} className="h-9 border border-[#273865] bg-[#0d1630] px-2 text-xs text-[#f4f4f5] outline-none focus:border-[#8be9ff]"><option value="note">Note</option><option value="fact">Fact</option><option value="preference">Preference</option><option value="goal">Goal</option></select>
+                    </div>
+                    <Input aria-label="Search saved dialogue" value={recallQuery} onChange={(event) => setRecallQuery(event.target.value)} placeholder="Search your saved dialogue" className="mt-3 h-10 rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8]" />
+                    {recallQuery.trim().length === 1 && <p className="mt-2 text-xs text-[#737b8f]">Enter at least two characters to search your stored dialogue.</p>}
+                    {recallQueryResult.isFetching && <p className="mt-2 text-xs text-[#737b8f]">Searching local dialogue…</p>}
+                    {recallQueryResult.data?.matches.length ? <div className="mt-3 space-y-2">{(recallQueryResult.data.matches as RecallMatch[]).map((match) => <div key={match.id} className="border border-[#273865] bg-[#0d1630] p-3"><div className="flex items-center justify-between gap-3"><span className="text-[0.58rem] uppercase tracking-[0.16em] text-[#cbb8ff]">{match.role === "portal" ? "KEIRA" : "Operator"} · saved dialogue</span><Button type="button" variant="outline" size="sm" disabled={promoteRecallMutation.isPending} onClick={() => void handlePromoteRecall(match)} className="h-8 rounded-none border-[#354064] text-[0.62rem] text-[#8be9ff] hover:bg-[#13213e]">Promote to ledger</Button></div><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-[#a6aec0]">{match.content.slice(0, 500)}{match.content.length > 500 ? "…" : ""}</p></div>)}</div> : recallQuery.trim().length >= 2 && !recallQueryResult.isFetching && <p className="mt-3 text-xs leading-5 text-[#737b8f]">No matching saved dialogue was found.</p>}
+                  </div>
                 </div>
               </section>
             )}
@@ -845,6 +893,9 @@ export default function PortalChat() {
                   <textarea aria-label="KEIRA instructions" value={profileDraft.customInstructions} onChange={(event) => setProfileDraft((draft) => ({ ...draft, customInstructions: event.target.value }))} placeholder="Optional instructions for how KEIRA should answer you..." className="min-h-24 rounded-none border border-[#273865] bg-[#0d1630] p-3 text-sm leading-6 text-[#f4f4f5] outline-none placeholder:text-[#687aa8] focus:border-[#8be9ff] md:col-span-2" />
                   <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Response variation <input aria-label="Response variation" type="range" min="0" max="100" value={profileDraft.modelTemperature} onChange={(event) => setProfileDraft((draft) => ({ ...draft, modelTemperature: Number(event.target.value) }))} /></label>
                   <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Context sensitivity <input aria-label="Context sensitivity" type="range" min="0" max="100" value={profileDraft.predictiveSensitivity} onChange={(event) => setProfileDraft((draft) => ({ ...draft, predictiveSensitivity: Number(event.target.value) }))} /></label>
+                  <label className="text-xs text-[#a6aec0]">Response objective<select aria-label="Response objective" value={profileDraft.responseObjective} onChange={(event) => setProfileDraft((draft) => ({ ...draft, responseObjective: event.target.value as typeof draft.responseObjective }))} className="mt-1 block h-10 w-full border border-[#273865] bg-[#0d1630] px-3 text-sm text-[#f4f4f5] outline-none focus:border-[#8be9ff]"><option value="direct">Direct answer</option><option value="analysis">Deep analysis</option><option value="creative">Creative exploration</option><option value="plan">Implementation plan</option></select></label>
+                  <label className="text-xs text-[#a6aec0]">Conversation carryover<select aria-label="Conversation carryover" value={profileDraft.contextCarryover} onChange={(event) => setProfileDraft((draft) => ({ ...draft, contextCarryover: event.target.value as typeof draft.contextCarryover }))} className="mt-1 block h-10 w-full border border-[#273865] bg-[#0d1630] px-3 text-sm text-[#f4f4f5] outline-none focus:border-[#8be9ff]"><option value="minimal">Minimal · 2 prior messages</option><option value="standard">Standard · 6 prior messages</option><option value="extended">Extended · 12 prior messages</option></select></label>
+                  <p className="text-xs leading-5 text-[#737b8f] md:col-span-2">The objective changes KEIRA’s live Bedrock instruction contract. Carryover controls the exact number of prior messages sent with the next prompt; it does not create hidden memory or live research access.</p>
                   <div className="flex flex-wrap items-center gap-3"><Button type="button" onClick={() => void handleSaveProfile()} disabled={profileSaving} className="rounded-none bg-[#8be9ff] text-[#041018] hover:bg-[#c4f7ff] md:w-fit"><Save className="mr-2 h-4 w-4" /> {profileSaving ? "Saving..." : "Save profile"}</Button>{profileStatus && <span className="text-xs text-[#8be9ff]">{profileStatus}</span>}</div>
                 </div>
               </section>
@@ -892,6 +943,9 @@ export default function PortalChat() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#202637] py-3 text-[0.68rem] uppercase tracking-[0.18em] text-[#a7a2c2]">
                 {stage && <span>Context / {STAGE_LABELS[stage]}</span>}
                 {strategy && <span>Mode / {STRATEGY_LABELS[strategy]}</span>}
+                {lastMessageMetadata?.responseObjective && <span>Objective / {lastMessageMetadata.responseObjective}</span>}
+                {lastMessageMetadata?.contextCarryover && <span>Carryover / {lastMessageMetadata.carryoverMessages ?? 0} prior messages</span>}
+                {lastMessageMetadata?.qualityContract && <span className="text-[#8be9ff]" title={lastMessageMetadata.qualityContract}>Contract / explicit bounds</span>}
                 {lastMessageMetadata?.stageTransition && <span className="text-[#e8ddff]">Transition / {lastMessageMetadata.stageTransition}</span>}
               </div>
             )}
