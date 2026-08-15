@@ -217,9 +217,14 @@
 - [x] Persist the selected model in the KEIRA profile and apply it to the actual Bedrock inference request
 - [x] Add UI state, truthful active-model visibility, and model-selection error handling in the KEIRA console
 - [x] Add regression coverage that verifies the selected model reaches the Bedrock invocation boundary
-- [ ] Run the full release gate and publish the audited model-selector upgrade
+- [x] Run the full release gate and publish the audited model-selector upgrade
 - [ ] Update the São Paulo production instance to the published model-selector release and verify both options in the live console
 
 ## KEIRA Production Process Recovery
 - [x] Replace the failing `pm2-ubuntu` boot unit with a verified systemd service that starts KEIRA from `/opt/keira/dist/index.js` after reboot
 - [x] Verify the new service, Nginx proxy, and public HTTPS endpoint recover successfully after a controlled restart
+
+## KEIRA Owner Entry Repair
+- [ ] Replace the public owner-entry heading with neutral Portal wording while retaining KEIRA as the intelligence identity
+- [ ] Add a protected owner-access-key reset path so Tyler can choose a new key without chat exposure or repository storage
+- [ ] Validate owner-entry success and invalid-key handling, publish the repair, and apply the rotated key on São Paulo

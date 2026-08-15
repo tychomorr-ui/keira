@@ -514,7 +514,7 @@ export default function PortalChat() {
             <ShieldCheck className="h-5 w-5" />
             <span className="text-xs uppercase tracking-[0.28em]">KEIRA / Awaiting Contact</span>
           </div>
-          <h1 className="font-serif text-4xl tracking-tight">Enter KEIRA.</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Enter the Portal.</h1>
           <p className="mt-4 max-w-md text-sm leading-7 text-[#a6aec0]">
             A direct, uncensored conversation with the unknown—esoteric knowledge, unvarnished truth, and the questions polite systems refuse to touch.
           </p>
@@ -524,7 +524,7 @@ export default function PortalChat() {
           {!showPasswordLogin ? (
             <div className="mt-4 space-y-3">
               <p className="text-sm leading-6 text-[#a6aec0]">
-                This is the owner entrance. Enter your newly configured private owner access key to establish your session.
+                This is the owner entrance to KEIRA. Use your private owner access key to establish a session.
               </p>
               <Input
                 aria-label="Private owner access key"
@@ -546,7 +546,7 @@ export default function PortalChat() {
                 className="w-full rounded-none bg-[#d7c7ff] text-[#07090f] hover:bg-[#f0e8ff] disabled:bg-[#222b48]"
               >
                 {authSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                Enter as Tyler Morris
+                Open Portal as Tyler Morris
               </Button>
               <button
                 type="button"
