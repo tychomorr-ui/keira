@@ -21,10 +21,13 @@ import {
   extractLivingContext,
 } from "./cmap-portal-integration";
 import { updateMissionState, type MissionState } from "./cmap-handshake";
+import { getKeiraCapabilities } from "./keira-capabilities";
 
 const cmapSessions = new Map<number, MissionState>(); // Keyed by conversationId
 
 export const portalChatRouter = router({
+  getCapabilities: protectedProcedure.query(() => getKeiraCapabilities()),
+
   getConversations: protectedProcedure.query(async ({ ctx }) => {
     return await portalChat.getUserConversations(ctx.user.id);
   }),

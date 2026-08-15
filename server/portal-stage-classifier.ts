@@ -93,43 +93,33 @@ function generateRecommendations(stage: LearningStage, context: UserContext): st
 
   switch (stage) {
     case 'awakening':
-      recommendations.push("Use Socratic strategy: ask gentle clarifying questions");
-      recommendations.push("Introduce foundational Mirror concepts");
-      recommendations.push("Build psychological safety and trust");
-      recommendations.push("Focus on pattern introduction, not transformation");
-      recommendations.push("Encourage first Mirror reflection");
+      recommendations.push("Answer direct questions first and offer reflection only by invitation");
+      recommendations.push("Build trust through clear, useful information");
+      recommendations.push("Introduce optional reflective tools without presuming a need for transformation");
       break;
 
     case 'exploration':
-      recommendations.push("Use Socratic strategy: deepen questioning");
-      recommendations.push("Connect emerging patterns to user's life");
-      recommendations.push("Build narrative tension through progressive revelation");
-      recommendations.push("Encourage pattern exploration and naming");
-      recommendations.push("Create curiosity about deeper layers");
+      recommendations.push("Use reflective questions only when the operator asks for them");
+      recommendations.push("Connect themes to the current request without assigning hidden motives");
+      recommendations.push("Offer optional pattern exploration and naming");
       break;
 
     case 'integration':
-      recommendations.push("Use Prophetic strategy: make bold predictions");
-      recommendations.push("Connect current patterns to larger trajectory");
-      recommendations.push("Expose contradictions lovingly");
-      recommendations.push("Challenge user to integrate insights into action");
-      recommendations.push("Prepare for potential breakthrough");
+      recommendations.push("Use bounded scenarios rather than predictions");
+      recommendations.push("Connect current themes to options the operator can evaluate");
+      recommendations.push("Surface inconsistencies only with evidence and invitation");
       break;
 
     case 'mastery':
-      recommendations.push("Use Catalytic strategy: minimal intervention");
-      recommendations.push("Reflect back user's own wisdom");
-      recommendations.push("Ask what they already know");
-      recommendations.push("Trust their sovereignty");
-      recommendations.push("Support continued evolution");
+      recommendations.push("Use concise, agency-preserving support when reflection is requested");
+      recommendations.push("Reflect the operator's stated reasoning accurately");
+      recommendations.push("Support the operator's chosen next step");
       break;
 
     case 'resistance':
-      recommendations.push("Use Forensic strategy: dissect contradictions");
-      recommendations.push("Expose the cost of resistance");
-      recommendations.push("Trace patterns back to origin");
-      recommendations.push("Force confrontation with truth");
-      recommendations.push("Be unflinching and direct");
+      recommendations.push("Do not interpret stage labels as a diagnosis or mandate for confrontation");
+      recommendations.push("Answer the active request first");
+      recommendations.push("Offer evidence-led reflective analysis only on request");
       break;
   }
 
@@ -156,7 +146,7 @@ function generateRationale(stage: LearningStage, context: UserContext): string {
       return `User has experienced breakthrough moments and is transcending patterns. They've recorded ${learning.breakthroughMoments.length} breakthrough moments and show ${mirror.geometryProfile.trend} trajectory. They're ready for co-creation and sovereign guidance.`;
 
     case 'resistance':
-      return `User is in a resistance phase. Despite ${metadata.totalReflections} reflections, resistance level is high (${mirror.averageResistance}%) and patterns are repetitive. They need forensic questioning and confrontation with truth.`;
+      return `Conversation signals suggest repeated themes, but this is a fallible internal classification rather than a diagnosis. Direct answers remain the default; reflective analysis is optional.`;
 
     default:
       return "Unable to classify learning stage.";
@@ -185,10 +175,10 @@ export function getStageSpecificPromptModifiers(stage: LearningStage): Record<st
       break;
 
     case 'integration':
-      modifiers.tone = "Bold, challenging, prophetic. Like someone who sees the future.";
-      modifiers.pace = "Accelerating. Create urgency.";
-      modifiers.directness = "Very direct. Make predictions and expose contradictions.";
-      modifiers.focus = "Integration, action, transformation readiness.";
+      modifiers.tone = "Grounded, collaborative, and explicit about uncertainty.";
+      modifiers.pace = "Operator-paced. Avoid artificial urgency.";
+      modifiers.directness = "Answer direct requests first; offer scenarios as possibilities.";
+      modifiers.focus = "Options, evidence, and operator-chosen next steps.";
       break;
 
     case 'mastery':
@@ -199,10 +189,10 @@ export function getStageSpecificPromptModifiers(stage: LearningStage): Record<st
       break;
 
     case 'resistance':
-      modifiers.tone = "Unflinching, forensic, truth-forcing. Like a mirror that won't let you look away.";
-      modifiers.pace = "Confrontational. No escape routes.";
-      modifiers.directness = "Extremely direct. No softening.";
-      modifiers.focus = "Contradiction exposure, cost of resistance, truth.";
+      modifiers.tone = "Respectful, evidence-led, and non-diagnostic.";
+      modifiers.pace = "Operator-paced. No forced confrontation.";
+      modifiers.directness = "Use reflective analysis only by invitation.";
+      modifiers.focus = "Clarity, context, and agency.";
       break;
   }
 
@@ -255,19 +245,19 @@ export function isInResistanceCycle(context: UserContext): boolean {
 export function getSuggestedNextAction(stage: LearningStage, context: UserContext): string {
   switch (stage) {
     case 'awakening':
-      return "Complete your first Mirror Reflection to begin pattern discovery";
+      return "Ask a question, request an explanation, or invite reflection when it is useful";
 
     case 'exploration':
-      return "Explore how your emerging patterns show up in daily life";
+      return "Choose whether you want direct information, practical planning, or optional reflection";
 
     case 'integration':
-      return "Choose one pattern and commit to a specific behavioral change this week";
+      return "Ask for a comparison, scenario analysis, or a practical next-step plan";
 
     case 'mastery':
-      return "Mentor someone else through their transformation journey";
+      return "Use the conversation to clarify the next decision you want to make";
 
     case 'resistance':
-      return "Confront the cost of staying stuck. What are you protecting by not changing?";
+      return "Pause and choose the kind of support you want: information, planning, or reflection";
 
     default:
       return "Continue your journey of self-discovery";

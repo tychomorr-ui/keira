@@ -325,7 +325,7 @@ describe("Portal Adaptive Response Engine", () => {
       const classification = classifyLearningStage(context);
 
       expect(classification.recommendations.length).toBeGreaterThan(0);
-      expect(classification.recommendations[0]).toContain('Socratic');
+      expect(classification.recommendations[0]).toContain('Answer direct questions first');
     });
 
     it("should provide appropriate recommendations for resistance stage", () => {
@@ -337,7 +337,7 @@ describe("Portal Adaptive Response Engine", () => {
       const classification = classifyLearningStage(context);
 
       expect(classification.recommendations.length).toBeGreaterThan(0);
-      expect(classification.recommendations[0]).toContain('Forensic');
+      expect(classification.recommendations[0]).toContain('Do not interpret stage labels as a diagnosis');
     });
   });
 

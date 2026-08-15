@@ -403,52 +403,28 @@ export function formatContextForLLM(context: UserContext): string {
 
   lines.push("=== USER CONTEXT ===\n");
 
-  // Learning stage
-  lines.push(`Learning Stage: ${context.synthesis.learningStage.toUpperCase()}`);
-  lines.push(`Breakthrough Readiness: ${context.synthesis.breakthroughReadiness}%`);
-  lines.push(`Resistance Level: ${context.synthesis.resistanceLevel}%`);
-  lines.push(`Emotional Trajectory: ${context.synthesis.emotionalTrajectory}`);
+  lines.push("This context is fallible background only. Do not infer motive, diagnosis, or hidden meaning from it.");
+  lines.push("Answer the current operator request before using any contextual interpretation.");
   lines.push("");
 
   // Core patterns
   if (context.learning.corePatterns.length > 0) {
-    lines.push(`Core Patterns: ${context.learning.corePatterns.join(", ")}`);
+    lines.push(`Prior themes (optional): ${context.learning.corePatterns.join(", ")}`);
   }
 
   // Growth areas
   if (context.learning.growthAreas.length > 0) {
-    lines.push(`Growth Areas: ${context.learning.growthAreas.join(", ")}`);
+    lines.push(`Prior interests (optional): ${context.learning.growthAreas.join(", ")}`);
   }
 
   // Resistance points
   if (context.learning.resistancePoints.length > 0) {
-    lines.push(`Resistance Points: ${context.learning.resistancePoints.join(", ")}`);
-  }
-
-  // Breakthrough moments
-  if (context.learning.breakthroughMoments.length > 0) {
-    lines.push(`Breakthrough Moments: ${context.learning.breakthroughMoments.slice(0, 3).join(", ")}`);
+    lines.push(`Prior challenges (optional): ${context.learning.resistancePoints.join(", ")}`);
   }
 
   lines.push("");
 
-  // Recent Mirror insights
-  if (context.mirror.reflections.length > 0) {
-    lines.push("Recent Mirror Insights:");
-    context.mirror.reflections.slice(0, 2).forEach(r => {
-      lines.push(`  • "${r.userInput}" → Resistance: ${r.resistanceLevel}%, Next: ${r.nextStep}`);
-    });
-  }
-
-  lines.push("");
-
-  // Geometry profile
-  lines.push(`Geometry Profile: Unity ${context.mirror.geometryProfile.avgUnityScore}%, Opportunity ${context.mirror.geometryProfile.avgOpportunityScore}%, Resistance ${context.mirror.geometryProfile.avgResistanceLevel}% (${context.mirror.geometryProfile.trend})`);
-
-  lines.push("");
-
-  // Activity
-  lines.push(`Activity: ${context.metadata.totalReflections} reflections, ${context.metadata.totalChatMessages} chat messages, ${context.metadata.accountAgeInDays} days active`);
+  lines.push(`Conversation history: ${context.metadata.totalChatMessages} persisted messages across ${context.chatHistory.totalConversations} conversations.`);
 
   lines.push("\n=== END CONTEXT ===\n");
 

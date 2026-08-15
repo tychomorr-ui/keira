@@ -102,7 +102,7 @@ const CINEMATIC_NAV = [
   { label: "Arcana", icon: Sparkles, detail: "Esoteric signal" },
   { label: "Patterns", icon: Eye, detail: "Observed correspondences" },
   { label: "Resonance", icon: Compass, detail: "Dialogue tone" },
-  { label: "Interface", icon: Layers3, detail: "Portal state" },
+  { label: "Interface", icon: Layers3, detail: "Capability status" },
   { label: "Settings", icon: Settings2, detail: "Operator controls" },
 ] as const;
 
@@ -135,6 +135,8 @@ export default function PortalChat() {
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showKeywordPanel, setShowKeywordPanel] = useState(false);
   const [showVoicePanel, setShowVoicePanel] = useState(false);
+  const [showCapabilityPanel, setShowCapabilityPanel] = useState(false);
+  const [voiceSupport, setVoiceSupport] = useState({ input: false, output: false });
   const [newTitle, setNewTitle] = useState("");
   const [profileDraft, setProfileDraft] = useState({
     avatarUrl: "",
@@ -143,6 +145,10 @@ export default function PortalChat() {
     preferredVoice: "",
     voiceRate: 100,
     voicePitch: 100,
+    customPersona: "",
+    customInstructions: "",
+    modelTemperature: 10,
+    predictiveSensitivity: 75,
   });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
@@ -170,6 +176,9 @@ export default function PortalChat() {
   );
   const sendMessageMutation = trpc.portal.chat.sendMessage.useMutation();
   const learningProfileQuery = trpc.portal.chat.getLearningProfile.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const capabilitiesQuery = trpc.portal.chat.getCapabilities.useQuery(undefined, {
     enabled: isAuthenticated,
   });
 
@@ -214,12 +223,20 @@ export default function PortalChat() {
         preferredVoice: user.preferredVoice ?? "",
         voiceRate: user.voiceRate ?? 100,
         voicePitch: user.voicePitch ?? 100,
+        customPersona: user.customPersona ?? "",
+        customInstructions: user.customInstructions ?? "",
+        modelTemperature: user.modelTemperature ?? 10,
+        predictiveSensitivity: user.predictiveSensitivity ?? 75,
       });
     }
   }, [user?.id]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (typeof window === "undefined") return;
+    const supportsOutput = "speechSynthesis" in window;
+    const browserWindow = window as Window & { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+    setVoiceSupport({ input: Boolean(browserWindow.SpeechRecognition || browserWindow.webkitSpeechRecognition), output: supportsOutput });
+    if (!supportsOutput) return;
     const synthesis = window.speechSynthesis;
     const refreshVoices = () => setVoices(synthesis.getVoices());
     refreshVoices();
@@ -268,6 +285,10 @@ export default function PortalChat() {
         preferredVoice: profileDraft.preferredVoice || null,
         voiceRate: profileDraft.voiceRate,
         voicePitch: profileDraft.voicePitch,
+        customPersona: profileDraft.customPersona || null,
+        customInstructions: profileDraft.customInstructions || null,
+        modelTemperature: profileDraft.modelTemperature,
+        predictiveSensitivity: profileDraft.predictiveSensitivity,
       });
       await utils.auth.me.invalidate();
       setProfileStatus("Profile signal saved.");
@@ -329,7 +350,10 @@ export default function PortalChat() {
     }
     const browserWindow = window as Window & { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
     const Recognition = browserWindow.SpeechRecognition || browserWindow.webkitSpeechRecognition;
-    if (!Recognition) return;
+    if (!Recognition) {
+      setProfileStatus("Speech input is not available in this browser.");
+      return;
+    }
     const recognition = new Recognition();
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results).map((result) => result[0]?.transcript || "").join(" ");
@@ -354,6 +378,8 @@ export default function PortalChat() {
       setShowContextPanel(true);
     } else if (label === "Resonance") {
       setShowVoicePanel(true);
+    } else if (label === "Interface") {
+      setShowCapabilityPanel(true);
     } else {
       setShowProfilePanel(true);
     }
@@ -755,6 +781,10 @@ export default function PortalChat() {
                   <Input aria-label="Custom avatar glyph" value={profileDraft.avatarGlyph} onChange={(event) => setProfileDraft((draft) => ({ ...draft, avatarGlyph: event.target.value, avatarUrl: "" }))} placeholder="Custom avatar glyph" className="rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8]" />
                   <Input aria-label="Avatar image URL" value={profileDraft.avatarUrl} onChange={(event) => setProfileDraft((draft) => ({ ...draft, avatarUrl: event.target.value }))} placeholder="Avatar image URL (optional)" className="rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8]" />
                   <textarea aria-label="Alien bio" value={profileDraft.alienBio} onChange={(event) => setProfileDraft((draft) => ({ ...draft, alienBio: event.target.value }))} placeholder="Write the signal you want others to meet..." className="min-h-24 rounded-none border border-[#273865] bg-[#0d1630] p-3 text-sm leading-6 text-[#f4f4f5] outline-none placeholder:text-[#687aa8] focus:border-[#8be9ff] md:col-span-2" />
+                  <Input aria-label="KEIRA persona" value={profileDraft.customPersona} onChange={(event) => setProfileDraft((draft) => ({ ...draft, customPersona: event.target.value }))} placeholder="Optional KEIRA persona or voice" className="rounded-none border-[#273865] bg-[#0d1630] text-[#f4f4f5] placeholder:text-[#687aa8] md:col-span-2" />
+                  <textarea aria-label="KEIRA instructions" value={profileDraft.customInstructions} onChange={(event) => setProfileDraft((draft) => ({ ...draft, customInstructions: event.target.value }))} placeholder="Optional instructions for how KEIRA should answer you..." className="min-h-24 rounded-none border border-[#273865] bg-[#0d1630] p-3 text-sm leading-6 text-[#f4f4f5] outline-none placeholder:text-[#687aa8] focus:border-[#8be9ff] md:col-span-2" />
+                  <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Response variation <input aria-label="Response variation" type="range" min="0" max="100" value={profileDraft.modelTemperature} onChange={(event) => setProfileDraft((draft) => ({ ...draft, modelTemperature: Number(event.target.value) }))} /></label>
+                  <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Context sensitivity <input aria-label="Context sensitivity" type="range" min="0" max="100" value={profileDraft.predictiveSensitivity} onChange={(event) => setProfileDraft((draft) => ({ ...draft, predictiveSensitivity: Number(event.target.value) }))} /></label>
                   <div className="flex flex-wrap items-center gap-3"><Button type="button" onClick={() => void handleSaveProfile()} disabled={profileSaving} className="rounded-none bg-[#8be9ff] text-[#041018] hover:bg-[#c4f7ff] md:w-fit"><Save className="mr-2 h-4 w-4" /> {profileSaving ? "Saving..." : "Save profile"}</Button>{profileStatus && <span className="text-xs text-[#8be9ff]">{profileStatus}</span>}</div>
                 </div>
               </section>
@@ -775,6 +805,7 @@ export default function PortalChat() {
                   <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Rate <input aria-label="Voice rate" type="range" min="60" max="140" value={profileDraft.voiceRate} onChange={(event) => setProfileDraft((draft) => ({ ...draft, voiceRate: Number(event.target.value) }))} /></label>
                   <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Pitch <input aria-label="Voice pitch" type="range" min="70" max="130" value={profileDraft.voicePitch} onChange={(event) => setProfileDraft((draft) => ({ ...draft, voicePitch: Number(event.target.value) }))} /></label>
                 </div>
+                <p className="mt-3 text-xs leading-6 text-[#737b8f]">Speech output: {voiceSupport.output ? "available through this browser" : "unavailable in this browser"}. Speech input: {voiceSupport.input ? "available through this browser" : "unavailable in this browser"}.</p>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" onClick={isSpeaking ? stopSpeaking : speakLastPortalMessage} disabled={!messages.some((message) => message.role === "portal")} className="rounded-none border border-[#273865] bg-transparent text-[#8be9ff] hover:bg-[#13213e]">
@@ -785,23 +816,21 @@ export default function PortalChat() {
                       <Save className="mr-2 h-4 w-4" /> Save voice
                     </Button>
                   </div>
-                  {isSpeaking && (
-                    <div className="flex items-center gap-1 px-3 py-1" aria-label="Speech visualizer active">
-                      <span className="h-5 w-1 animate-pulse bg-[#8be9ff]" style={{ animationDuration: "350ms" }} />
-                      <span className="h-7 w-1 animate-pulse bg-[#b8a1ff]" style={{ animationDuration: "250ms" }} />
-                      <span className="h-4 w-1 animate-pulse bg-[#06b6d4]" style={{ animationDuration: "450ms" }} />
-                      <span className="h-6 w-1 animate-pulse bg-[#8be9ff]" style={{ animationDuration: "300ms" }} />
-                      <span className="h-3 w-1 animate-pulse bg-[#b8a1ff]" style={{ animationDuration: "400ms" }} />
-                      <span className="ml-2 text-[0.62rem] uppercase tracking-[0.2em] text-[#8be9ff]">Resonating</span>
-                    </div>
-                  )}
+                  {isSpeaking && <div className="flex items-center gap-2 px-3 py-1 text-[0.62rem] uppercase tracking-[0.2em] text-[#8be9ff]" aria-label="Browser speech output active"><span className="h-2 w-2 animate-pulse rounded-full bg-[#8be9ff]" /> Browser speech output active</div>}
                 </div>
+              </section>
+            )}
+
+            {showCapabilityPanel && (
+              <section className="relative overflow-hidden border-b border-[#273865] bg-[#080f22]/90 py-5" aria-label="KEIRA capability status">
+                <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[#8be9ff]"><Layers3 className="h-4 w-4" /> Available capabilities</div><button type="button" onClick={() => setShowCapabilityPanel(false)} className="rounded-sm p-1 text-[#737b8f] hover:text-[#f3eadb]" aria-label="Close capability status"><X className="h-4 w-4" /></button></div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">{capabilitiesQuery.data?.map((capability) => <div key={capability.id} className="border border-[#273865] bg-[#0d1630] p-3"><div className="flex items-center justify-between gap-3"><span className="text-sm text-[#f3eadb]">{capability.label}</span><span className={`text-[0.58rem] uppercase tracking-[0.16em] ${capability.status === "available" ? "text-[#8be9ff]" : "text-[#d7c7ff]"}`}>{capability.status.replace("-", " ")}</span></div><p className="mt-2 text-xs leading-6 text-[#a6aec0]">{capability.detail}</p></div>) || <p className="text-sm text-[#737b8f]">Loading verified capability status…</p>}</div>
               </section>
             )}
 
             {(stage || strategy) && (
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#202637] py-3 text-[0.68rem] uppercase tracking-[0.18em] text-[#a7a2c2]">
-                {stage && <span>Stage / {STAGE_LABELS[stage]}</span>}
+                {stage && <span>Context / {STAGE_LABELS[stage]}</span>}
                 {strategy && <span>Mode / {STRATEGY_LABELS[strategy]}</span>}
                 {lastMessageMetadata?.stageTransition && <span className="text-[#e8ddff]">Transition / {lastMessageMetadata.stageTransition}</span>}
               </div>
@@ -829,7 +858,7 @@ export default function PortalChat() {
                 {messages.map((message, index) => (
                   <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                     <div className={`max-w-3xl ${message.role === "user" ? "max-w-2xl" : "w-full"}`}>
-                      <div className="mb-2 text-[0.62rem] uppercase tracking-[0.24em] text-[#737b8f]">{message.role === "user" ? "Operator" : "Portal"}</div>
+                      <div className="mb-2 text-[0.62rem] uppercase tracking-[0.24em] text-[#737b8f]">{message.role === "user" ? "Operator" : "KEIRA"}</div>
                       <div className={`${message.role === "user" ? "border border-[#354064] bg-[#0d1224] text-[#f3eadb]" : "border-l border-[#b8a1ff] text-[#e7e9ef]"} px-4 py-1 text-[0.98rem] leading-8`}>
                         {message.role === "portal" ? (
                           <div className="portal-response-signal relative">
@@ -880,7 +909,7 @@ export default function PortalChat() {
                 <Input
                   ref={composerRef}
                   aria-label="Message KEIRA"
-                  placeholder="Ask the question beneath the question."
+                  placeholder="Ask KEIRA anything—information, analysis, planning, or reflection."
                   value={inputValue}
                   onChange={(event) => setInputValue(event.target.value)}
                   onKeyDown={(event) => {
