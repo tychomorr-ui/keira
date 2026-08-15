@@ -172,3 +172,9 @@
 ## KEIRA Identity
 - [ ] Confirm KEIRA naming conventions and align the dedicated repository, user-facing branding, and São Paulo deployment
 - [ ] Preserve KEIRA as the dedicated intelligence node while documenting its distinct naming lineage from Tesseract-A’s KEIRA$KHAOS mode
+
+## KEIRA Informative-First Conversation Correction
+- [x] Replace default combative or psychologizing replies with intent-sensitive, informative-first responses
+- [x] Preserve reflective depth as an explicit or clearly invited mode rather than a default reaction to factual requests
+- [x] Add regression tests for capability questions, information requests, and reflective opt-in routing
+- [x] Add a regression test for respectful handling of personal or spiritual statements without ridicule or motive-assignment

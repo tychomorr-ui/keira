@@ -92,8 +92,8 @@ export const portalChatRouter = router({
       // Classify learning stage
       const stageClassification = classifyLearningStage(userContext);
 
-      // Select optimal dialogue strategy
-      const strategySelection = selectDialogueStrategy(userContext, stageClassification);
+      // The current operator request takes priority over historic stage metadata.
+      const strategySelection = selectDialogueStrategy(userContext, stageClassification, message);
 
       // Get conversation history for context
       const conversationResult = await portalChat.getConversation(conversationId, ctx.user.id);

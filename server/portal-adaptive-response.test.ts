@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import type { UserContext } from "./portal-context-retrieval";
 import { classifyLearningStage, isBreakthroughReady, isInResistanceCycle } from "./portal-stage-classifier";
-import { selectDialogueStrategy } from "./portal-strategy-selector";
+import { classifyMessageIntent, getStrategySystemPrompt, selectDialogueStrategy } from "./portal-strategy-selector";
 import { detectStageTransition } from "./portal-adaptive-response";
 
 describe("Portal Adaptive Response Engine", () => {
@@ -204,6 +204,35 @@ describe("Portal Adaptive Response Engine", () => {
   });
 
   describe("Strategy Selection", () => {
+    it("uses an informative strategy for capability and factual requests regardless of learning stage", () => {
+      const context = createMockContext({
+        synthesis: { ...createMockContext().synthesis, learningStage: 'resistance' },
+      });
+      const classification = classifyLearningStage(context);
+
+      const strategy = selectDialogueStrategy(context, classification, "Give me a concise breakdown of your capabilities");
+
+      expect(strategy.strategy).toBe('informative');
+      expect(strategy.responseGuidelines).toContain('Answer the direct question before adding interpretation');
+    });
+
+    it("keeps reflection available only when the operator explicitly invites it", () => {
+      expect(classifyMessageIntent("Reflect on the deeper pattern in what I just said")).toBe('reflective');
+      expect(classifyMessageIntent("Give me a system prompt for a technical assistant")).toBe('informative');
+    });
+
+    it("treats personal or spiritual statements respectfully without motive-assignment", () => {
+      const context = createMockContext();
+      const classification = classifyLearningStage(context);
+      const strategy = selectDialogueStrategy(context, classification, "I see humanity as reflections of a creator and want to discuss that belief");
+      const prompt = getStrategySystemPrompt(strategy.strategy, context);
+
+      expect(strategy.strategy).toBe('informative');
+      expect(strategy.responseGuidelines).toContain('Do not infer hidden motives, trauma, avoidance, or personal defects from ordinary wording');
+      expect(prompt).toContain('Treat personal, spiritual, and unusual beliefs with respect');
+      expect(prompt).toContain('without ridicule or interrogation');
+    });
+
     it("should select Socratic strategy for exploration stage", () => {
       const context = createMockContext({
         metadata: { ...createMockContext().metadata, totalReflections: 3 },
@@ -214,7 +243,7 @@ describe("Portal Adaptive Response Engine", () => {
       });
       const classification = classifyLearningStage(context);
 
-      const strategy = selectDialogueStrategy(context, classification);
+      const strategy = selectDialogueStrategy(context, classification, "Reflect on the deeper pattern in my current situation");
 
       expect(strategy.strategy).toBe('socratic');
     });
@@ -226,7 +255,7 @@ describe("Portal Adaptive Response Engine", () => {
       });
       const classification = classifyLearningStage(context);
 
-      const strategy = selectDialogueStrategy(context, classification);
+      const strategy = selectDialogueStrategy(context, classification, "Reflect on the future path this pattern could create");
 
       expect(strategy.strategy).toBe('prophetic');
     });
@@ -238,7 +267,7 @@ describe("Portal Adaptive Response Engine", () => {
       });
       const classification = classifyLearningStage(context);
 
-      const strategy = selectDialogueStrategy(context, classification);
+      const strategy = selectDialogueStrategy(context, classification, "Challenge me about the contradiction in what I have been saying");
 
       expect(strategy.strategy).toBe('forensic');
     });
@@ -257,7 +286,7 @@ describe("Portal Adaptive Response Engine", () => {
       });
       const classification = classifyLearningStage(context);
 
-      const strategy = selectDialogueStrategy(context, classification);
+      const strategy = selectDialogueStrategy(context, classification, "Reflect on what I already know and what to do next");
 
       expect(strategy.strategy).toBe('catalytic');
     });

@@ -34,7 +34,7 @@ import { Streamdown } from "streamdown";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 type LearningStage = "awakening" | "exploration" | "integration" | "mastery" | "resistance";
-type DialogueStrategy = "socratic" | "prophetic" | "forensic" | "catalytic";
+type DialogueStrategy = "informative" | "socratic" | "prophetic" | "forensic" | "catalytic";
 type MessageRole = "user" | "portal";
 
 type PortalMessage = {
@@ -87,6 +87,7 @@ const STAGE_LABELS: Record<LearningStage, string> = {
 };
 
 const STRATEGY_LABELS: Record<DialogueStrategy, string> = {
+  informative: "Informative",
   socratic: "Socratic",
   prophetic: "Prophetic",
   forensic: "Forensic",
