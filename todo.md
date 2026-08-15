@@ -147,3 +147,8 @@
 - [x] Eliminate Manus-specific reflection errors by replacing fallback strings with resilient sovereign dialogue prompts
 - [x] Create comprehensive `LIGHTSAIL_DEPLOYMENT_GUIDE.md` for independent self-hosted deployment on AWS Lightsail without platform paywalls
 - [x] Run strict TypeScript compilation and pass all 110 Vitest tests successfully
+
+## Step-by-Step Sovereign Verification & AWS RDS Secrets
+- [x] Configure Bedrock region `sa-east-1` and model `anthropic.claude-opus-5` with secure API key
+- [x] Integrate AWS RDS database and Secrets Manager (`portal-db-01`) references
+- [x] Run strict TypeScript compilation and pass all 112 Vitest tests successfully

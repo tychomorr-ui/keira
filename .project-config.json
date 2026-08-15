@@ -26,6 +26,9 @@
   "path": "/home/ubuntu/sovereign-truth-engine-app",
   "port": 3000,
   "secrets": {
+    "BEDROCK_API_KEY": "ABSKQmVkcm9ja0FQSUtleS11bjR6LWF0LTU1OTE2OTIwMjQxMTptNElXMlFkTno5QVN6R2hhM0c3cDNRSWxhYkNhZlorK0NBTWhJSDlhb1JyUEcrQmFqVWxuVFc5eDhPRT0=",
+    "BEDROCK_MODEL_ID": "anthropic.claude-opus-5",
+    "BEDROCK_REGION": "sa-east-1",
     "BUILT_IN_FORGE_API_KEY": "k78ocw9GUbrCTwQMh5rq47",
     "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
     "JWT_SECRET": "NcJsF8WUqAYVZvpGVXxiHV",
