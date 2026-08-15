@@ -16,6 +16,7 @@ import {
   resolveResponseObjective,
   type ResponseObjective,
 } from "./keira-response-controls";
+import { resolveKeiraModelId, type KeiraModelId } from "./keira-models";
 
 export interface AdaptiveResponse {
   strategy: DialogueStrategy;
@@ -48,6 +49,7 @@ export async function generateAdaptiveResponse(
   strategy: StrategySelection,
   recentMessages: Array<{ role: 'user' | 'portal'; content: string }>,
   responseVariation?: number,
+  selectedModel?: KeiraModelId,
 ): Promise<AdaptiveResponse> {
   try {
     // Build comprehensive system prompt
@@ -70,6 +72,7 @@ export async function generateAdaptiveResponse(
           maxTokens: 4096,
           temperature: normalizedVariation,
           topP: Math.max(0.6, Math.min(1, 0.8 + normalizedVariation * 0.2)),
+          modelId: resolveKeiraModelId(selectedModel),
         });
         portalResponse = bedrockResponse.content;
         provider = "bedrock";

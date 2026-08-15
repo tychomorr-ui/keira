@@ -30,6 +30,7 @@ export const users = mysqlTable("users", {
   predictiveSensitivity: int("predictiveSensitivity").default(75).notNull(),
   responseObjective: mysqlEnum("responseObjective", ["direct", "analysis", "creative", "plan"]).default("direct").notNull(),
   contextCarryover: mysqlEnum("contextCarryover", ["minimal", "standard", "extended"]).default("standard").notNull(),
+  selectedModel: mysqlEnum("selectedModel", ["moonshotai.kimi-k2.5", "deepseek.v3.2"]).default("moonshotai.kimi-k2.5").notNull(),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

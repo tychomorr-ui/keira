@@ -5,6 +5,7 @@ import {
   type Message as BedrockMessage,
 } from "@aws-sdk/client-bedrock-runtime";
 import { ENV } from "./_core/env";
+import { isKeiraModelId, resolveKeiraModelId, type KeiraModelId } from "./keira-models";
 
 export type BedrockRole = "user" | "assistant";
 
@@ -19,6 +20,8 @@ export type BedrockGatewayRequest = {
   maxTokens?: number;
   temperature?: number;
   topP?: number;
+  /** An explicit, operator-selected model from KEIRA's allow-list. */
+  modelId?: KeiraModelId;
 };
 
 export type BedrockGatewayResponse = {
@@ -75,17 +78,18 @@ function extractText(content: Array<{ text?: unknown }> | undefined): string {
     .trim();
 }
 
-function getBearerEndpoint(): string {
-  const modelId = encodeURIComponent(ENV.bedrockModelId);
-  return `https://bedrock-runtime.${ENV.bedrockRegion}.amazonaws.com/model/${modelId}/converse`;
+function getBearerEndpoint(modelId: KeiraModelId): string {
+  const encodedModelId = encodeURIComponent(modelId);
+  return `https://bedrock-runtime.${ENV.bedrockRegion}.amazonaws.com/model/${encodedModelId}/converse`;
 }
 
 async function invokeWithBearerToken(request: BedrockGatewayRequest): Promise<BedrockGatewayResponse> {
+  const modelId = resolveKeiraModelId(request.modelId ?? ENV.bedrockModelId);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ENV.bedrockTimeoutMs);
 
   try {
-    const response = await fetch(getBearerEndpoint(), {
+    const response = await fetch(getBearerEndpoint(modelId), {
       method: "POST",
       signal: controller.signal,
       headers: {
@@ -117,7 +121,7 @@ async function invokeWithBearerToken(request: BedrockGatewayRequest): Promise<Be
 
     return {
       content,
-      modelId: ENV.bedrockModelId,
+      modelId,
       stopReason: payload.stopReason,
       usage: payload.usage,
     };
@@ -132,8 +136,9 @@ async function invokeWithBearerToken(request: BedrockGatewayRequest): Promise<Be
 }
 
 async function invokeWithIam(request: BedrockGatewayRequest): Promise<BedrockGatewayResponse> {
+  const modelId = resolveKeiraModelId(request.modelId ?? ENV.bedrockModelId);
   const command = new ConverseCommand({
-    modelId: ENV.bedrockModelId,
+    modelId,
     system: [{ text: request.system }],
     messages: request.messages.map(toBedrockMessage),
     inferenceConfig: {
@@ -154,7 +159,7 @@ async function invokeWithIam(request: BedrockGatewayRequest): Promise<BedrockGat
 
   return {
     content,
-    modelId: ENV.bedrockModelId,
+    modelId,
     stopReason: response.stopReason,
     usage: response.usage,
   };
@@ -163,6 +168,10 @@ async function invokeWithIam(request: BedrockGatewayRequest): Promise<BedrockGat
 export async function invokeBedrock(request: BedrockGatewayRequest): Promise<BedrockGatewayResponse> {
   if (!isBedrockConfigured()) {
     throw new Error("Amazon Bedrock is not configured. Set BEDROCK_REGION, BEDROCK_MODEL_ID, and either BEDROCK_API_KEY or AWS IAM credentials.");
+  }
+
+  if (request.modelId && !isKeiraModelId(request.modelId)) {
+    throw new Error("The requested KEIRA model is not enabled for operator selection.");
   }
 
   return getBedrockAuthMode() === "bearer"

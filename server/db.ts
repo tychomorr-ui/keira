@@ -99,6 +99,9 @@ export async function updateUserProfile(id: number, input: {
   customInstructions?: string | null;
   modelTemperature?: number;
   predictiveSensitivity?: number;
+  responseObjective?: "direct" | "analysis" | "creative" | "plan";
+  contextCarryover?: "minimal" | "standard" | "extended";
+  selectedModel?: "moonshotai.kimi-k2.5" | "deepseek.v3.2";
 }) {
   const database = await getDb();
   if (!database) throw new Error("Database is not available");

@@ -95,6 +95,7 @@ export const appRouter = router({
         predictiveSensitivity: z.number().int().min(0).max(100).optional(),
         responseObjective: z.enum(["direct", "analysis", "creative", "plan"]).optional(),
         contextCarryover: z.enum(["minimal", "standard", "extended"]).optional(),
+        selectedModel: z.enum(["moonshotai.kimi-k2.5", "deepseek.v3.2"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const updated = await db.updateUserProfile(ctx.user.id, input);

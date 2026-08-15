@@ -38,6 +38,7 @@ type DialogueStrategy = "informative" | "socratic" | "prophetic" | "forensic" | 
 type MessageRole = "user" | "portal";
 type ResponseObjective = "direct" | "analysis" | "creative" | "plan";
 type ContextCarryover = "minimal" | "standard" | "extended";
+type KeiraModelId = "moonshotai.kimi-k2.5" | "deepseek.v3.2";
 
 type PortalMessage = {
   role: MessageRole;
@@ -81,6 +82,7 @@ type MessageMetadata = {
   contextCarryover?: ContextCarryover;
   carryoverMessages?: number;
   qualityContract?: string;
+  modelId?: KeiraModelId;
   cmap?: CmapState;
 };
 
@@ -178,6 +180,7 @@ export default function PortalChat() {
     predictiveSensitivity: 75,
     responseObjective: "direct" as ResponseObjective,
     contextCarryover: "standard" as ContextCarryover,
+    selectedModel: "moonshotai.kimi-k2.5" as KeiraModelId,
   });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
@@ -269,6 +272,7 @@ export default function PortalChat() {
         predictiveSensitivity: user.predictiveSensitivity ?? 75,
         responseObjective: user.responseObjective ?? "direct",
         contextCarryover: user.contextCarryover ?? "standard",
+        selectedModel: user.selectedModel ?? "moonshotai.kimi-k2.5",
       });
     }
   }, [user?.id]);
@@ -333,6 +337,7 @@ export default function PortalChat() {
         predictiveSensitivity: profileDraft.predictiveSensitivity,
         responseObjective: profileDraft.responseObjective,
         contextCarryover: profileDraft.contextCarryover,
+        selectedModel: profileDraft.selectedModel,
       });
       await utils.auth.me.invalidate();
       setProfileStatus("Profile signal saved.");
@@ -895,7 +900,8 @@ export default function PortalChat() {
                   <label className="flex items-center gap-2 text-xs text-[#a6aec0]">Context sensitivity <input aria-label="Context sensitivity" type="range" min="0" max="100" value={profileDraft.predictiveSensitivity} onChange={(event) => setProfileDraft((draft) => ({ ...draft, predictiveSensitivity: Number(event.target.value) }))} /></label>
                   <label className="text-xs text-[#a6aec0]">Response objective<select aria-label="Response objective" value={profileDraft.responseObjective} onChange={(event) => setProfileDraft((draft) => ({ ...draft, responseObjective: event.target.value as typeof draft.responseObjective }))} className="mt-1 block h-10 w-full border border-[#273865] bg-[#0d1630] px-3 text-sm text-[#f4f4f5] outline-none focus:border-[#8be9ff]"><option value="direct">Direct answer</option><option value="analysis">Deep analysis</option><option value="creative">Creative exploration</option><option value="plan">Implementation plan</option></select></label>
                   <label className="text-xs text-[#a6aec0]">Conversation carryover<select aria-label="Conversation carryover" value={profileDraft.contextCarryover} onChange={(event) => setProfileDraft((draft) => ({ ...draft, contextCarryover: event.target.value as typeof draft.contextCarryover }))} className="mt-1 block h-10 w-full border border-[#273865] bg-[#0d1630] px-3 text-sm text-[#f4f4f5] outline-none focus:border-[#8be9ff]"><option value="minimal">Minimal · 2 prior messages</option><option value="standard">Standard · 6 prior messages</option><option value="extended">Extended · 12 prior messages</option></select></label>
-                  <p className="text-xs leading-5 text-[#737b8f] md:col-span-2">The objective changes KEIRA’s live Bedrock instruction contract. Carryover controls the exact number of prior messages sent with the next prompt; it does not create hidden memory or live research access.</p>
+                  <label className="text-xs text-[#a6aec0] md:col-span-2">Active Bedrock model<select aria-label="Active Bedrock model" value={profileDraft.selectedModel} onChange={(event) => setProfileDraft((draft) => ({ ...draft, selectedModel: event.target.value as KeiraModelId }))} className="mt-1 block h-10 w-full border border-[#273865] bg-[#0d1630] px-3 text-sm text-[#f4f4f5] outline-none focus:border-[#8be9ff]"><option value="moonshotai.kimi-k2.5">Kimi K2.5 · primary conversational model</option><option value="deepseek.v3.2">DeepSeek V3.2 · alternative reasoning model</option></select></label>
+                  <p className="text-xs leading-5 text-[#737b8f] md:col-span-2">The objective changes KEIRA’s live Bedrock instruction contract. The selected model is applied to the next Bedrock request from this operator profile. Carryover controls the exact number of prior messages sent with the next prompt; it does not create hidden memory or live research access.</p>
                   <div className="flex flex-wrap items-center gap-3"><Button type="button" onClick={() => void handleSaveProfile()} disabled={profileSaving} className="rounded-none bg-[#8be9ff] text-[#041018] hover:bg-[#c4f7ff] md:w-fit"><Save className="mr-2 h-4 w-4" /> {profileSaving ? "Saving..." : "Save profile"}</Button>{profileStatus && <span className="text-xs text-[#8be9ff]">{profileStatus}</span>}</div>
                 </div>
               </section>
@@ -944,6 +950,7 @@ export default function PortalChat() {
                 {stage && <span>Context / {STAGE_LABELS[stage]}</span>}
                 {strategy && <span>Mode / {STRATEGY_LABELS[strategy]}</span>}
                 {lastMessageMetadata?.responseObjective && <span>Objective / {lastMessageMetadata.responseObjective}</span>}
+                {lastMessageMetadata?.modelId && <span>Model / {lastMessageMetadata.modelId === "moonshotai.kimi-k2.5" ? "Kimi K2.5" : "DeepSeek V3.2"}</span>}
                 {lastMessageMetadata?.contextCarryover && <span>Carryover / {lastMessageMetadata.carryoverMessages ?? 0} prior messages</span>}
                 {lastMessageMetadata?.qualityContract && <span className="text-[#8be9ff]" title={lastMessageMetadata.qualityContract}>Contract / explicit bounds</span>}
                 {lastMessageMetadata?.stageTransition && <span className="text-[#e8ddff]">Transition / {lastMessageMetadata.stageTransition}</span>}

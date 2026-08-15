@@ -211,3 +211,15 @@
 - [x] Repair the Express 5 static-route regression detected during dependency remediation and validate the standalone production-server smoke test
 - [x] Apply the updated Nginx configuration, fixed port `3210`, authentication rate limits, and TLS/HSTS configuration on the São Paulo Lightsail instance, then verify local and public headers
 - [x] Authorize the São Paulo Lightsail instance to reach the `portal-db-01` RDS endpoint on MySQL port `3306`, then verify the production database connection
+
+## KEIRA Explicit Bedrock Model Selector
+- [x] Add an authenticated operator model selector limited to the verified Kimi K2.5 and DeepSeek V3.2 Bedrock model IDs
+- [x] Persist the selected model in the KEIRA profile and apply it to the actual Bedrock inference request
+- [x] Add UI state, truthful active-model visibility, and model-selection error handling in the KEIRA console
+- [x] Add regression coverage that verifies the selected model reaches the Bedrock invocation boundary
+- [ ] Run the full release gate and publish the audited model-selector upgrade
+- [ ] Update the São Paulo production instance to the published model-selector release and verify both options in the live console
+
+## KEIRA Production Process Recovery
+- [x] Replace the failing `pm2-ubuntu` boot unit with a verified systemd service that starts KEIRA from `/opt/keira/dist/index.js` after reboot
+- [x] Verify the new service, Nginx proxy, and public HTTPS endpoint recover successfully after a controlled restart

@@ -154,6 +154,7 @@ export const portalChatRouter = router({
         predictiveSensitivity: userRecord[0].predictiveSensitivity,
         responseObjective: userRecord[0].responseObjective,
         contextCarryover: userRecord[0].contextCarryover,
+        selectedModel: userRecord[0].selectedModel,
       };
       const contextLedger = await portalChat.getContextEntries(ctx.user.id);
       (userContext as any).contextLedger = contextLedger
@@ -185,6 +186,7 @@ export const portalChatRouter = router({
         strategySelection,
         recentMessages,
         userRecord[0].modelTemperature,
+        userRecord[0].selectedModel,
       );
       const latencyMs = Date.now() - startTime;
 

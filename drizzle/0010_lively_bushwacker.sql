@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `selectedModel` enum('moonshotai.kimi-k2.5','deepseek.v3.2') DEFAULT 'moonshotai.kimi-k2.5' NOT NULL;

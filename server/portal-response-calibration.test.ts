@@ -62,4 +62,18 @@ describe("KEIRA response calibration", () => {
     expect(request.system).toContain("Never invent citations");
     expect(response.metadata.responseObjective).toBe("plan");
   });
+
+  it("applies the operator-selected DeepSeek model to the live Bedrock request", async () => {
+    await generateAdaptiveResponse(
+      "Compare two approaches.",
+      context as any,
+      informativeStrategy,
+      [],
+      20,
+      "deepseek.v3.2",
+    );
+
+    const request = invokeBedrockMock.mock.calls[0][0];
+    expect(request.modelId).toBe("deepseek.v3.2");
+  });
 });
