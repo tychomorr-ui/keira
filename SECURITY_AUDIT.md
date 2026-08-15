@@ -1,10 +1,10 @@
-# Portal — Security, API, and Self-Hosting Audit
+# KEIRA — Security, API, and Self-Hosting Audit
 
-**Audit scope.** This report covers the committed Portal source tree and its self-hosted production path: the Express entrypoint, tRPC router, first-party authentication, Amazon Bedrock gateway, S3 transcript storage, Vite build configuration, deployment helper, and tracked configuration artifacts. It is a source-and-build audit, not an attestation that a particular AWS account has model access, IAM permissions, DNS, or network controls configured.
+**Audit scope.** This report covers the committed KEIRA source tree and its self-hosted production path: the Express entrypoint, tRPC router, first-party authentication, Amazon Bedrock gateway, S3 transcript storage, Vite build configuration, deployment helper, and tracked configuration artifacts. It is a source-and-build audit, not an attestation that a particular AWS account has model access, IAM permissions, DNS, or network controls configured.
 
 ## Executive conclusion
 
-Portal’s active production request path is self-hostable with **AWS RDS/MySQL**, **Amazon Bedrock**, **Amazon S3**, **Nginx**, and **PM2**. The code no longer uses platform OAuth, platform analytics, platform LLM routing, platform storage proxying, or a platform Vite runtime plugin. Legacy platform-bound helper modules and an accidentally tracked managed-project configuration file were removed from the Git-tracked release.
+KEIRA’s active production request path is self-hostable with **AWS RDS/MySQL**, **Amazon Bedrock**, **Amazon S3**, **Nginx**, and **PM2**. The code no longer uses platform OAuth, platform analytics, platform LLM routing, platform storage proxying, or a platform Vite runtime plugin. Legacy platform-bound helper modules and an accidentally tracked managed-project configuration file were removed from the Git-tracked release.
 
 The build, strict TypeScript check, production static-serving smoke test, and full Vitest suite must be run for every release. The validated status for this release is recorded in the deployment checkpoint and associated test output.
 
@@ -25,7 +25,7 @@ The active tRPC router mounts only `auth.*` and `portal.chat.*` procedures. The 
 | `/api/trpc/auth.me` | Public | Reads a valid session cookie and returns the current identity or no identity. |
 | `/api/trpc/auth.login` and `/api/trpc/auth.register` | Public | Input is validated before first-party password/session operations. |
 | `/api/trpc/auth.ownerBootstrap` | Public caller, secret-gated | Requires the private `PORTAL_OWNER_ACCESS_TOKEN`; treat it as a high-value credential and rotate it if exposed. |
-| `/api/trpc/auth.logout` | Authenticated session | Clears the Portal session. |
+| `/api/trpc/auth.logout` | Authenticated session | Clears the KEIRA session. |
 | `/api/trpc/portal.chat.*` | Authenticated session | Enforces session context and conversation ownership by user ID. |
 | `/api/trpc/*` | HTTP request envelope | Express applies 1 MB JSON and URL-encoded body limits. |
 
@@ -33,7 +33,7 @@ There is deliberately **no** active Stripe webhook, Mirror, knowledge-graph, sub
 
 ## Runtime hardening
 
-The Express entrypoint disables `X-Powered-By` and sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and `Cross-Origin-Opener-Policy` headers. Nginx must remain the public ingress. The supplied `deploy-lightsail.sh` script binds Portal locally and configures Nginx to route public traffic to `127.0.0.1:3000`.
+The Express entrypoint disables `X-Powered-By` and sets `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and `Cross-Origin-Opener-Policy` headers. Nginx must remain the public ingress. The supplied `deploy-lightsail.sh` script binds KEIRA locally and configures Nginx to route public traffic to `127.0.0.1:3000`.
 
 Application-level login throttling is not implemented in the audited code. Add an Nginx `limit_req` zone or an upstream WAF/rate-limit policy before inviting public traffic. This is an explicit deployment control, not a claim of a currently configured service.
 

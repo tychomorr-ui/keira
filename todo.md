@@ -163,3 +163,12 @@
 - [x] Audit all self-hosting blockers and replace or document any Manus-managed runtime dependency
 - [x] Produce and verify an executable production deployment path for the Lightsail Ubuntu instance
 - [ ] Walk through the AWS deployment one verified console action at a time
+
+## Intelligence Node Identity
+- [x] Choose KEIRA as the final name for the sovereign ecosystem’s dedicated intelligence node, distinct from Tesseract-A, Root, XinUS Clarity, and Cosmic Net
+- [ ] Align the dedicated GitHub repository, user-facing branding, and São Paulo deployment with the finalized name
+- [x] Evaluate final name candidates against the required ancient, alien, and intelligent console character
+
+## KEIRA Identity
+- [ ] Confirm KEIRA naming conventions and align the dedicated repository, user-facing branding, and São Paulo deployment
+- [ ] Preserve KEIRA as the dedicated intelligence node while documenting its distinct naming lineage from Tesseract-A’s KEIRA$KHAOS mode

@@ -4,10 +4,10 @@ set -Eeuo pipefail
 # Run from the Lightsail browser console as a sudo-capable Ubuntu user.
 # Before first use, copy .env.example to .env and fill in every required value.
 
-APP_DIR="${APP_DIR:-/opt/portal}"
-REPO_URL="${REPO_URL:-https://github.com/tychomorr-ui/cosmic-net.git}"
+APP_DIR="${APP_DIR:-/opt/keira}"
+REPO_URL="${REPO_URL:-https://github.com/tychomorr-ui/keira.git}"
 BRANCH="${BRANCH:-main}"
-PORTAL_DOMAIN="${PORTAL_DOMAIN:-portal.xinus.one}"
+KEIRA_DOMAIN="${KEIRA_DOMAIN:-portal.xinus.one}"
 APP_PORT="${APP_PORT:-3000}"
 
 required_environment_variables=(
@@ -62,7 +62,7 @@ if ! command -v node >/dev/null 2>&1 || [[ "$(node -p 'process.versions.node.spl
 fi
 sudo npm install -g pnpm pm2
 
-echo "Retrieving the audited Portal source..."
+echo "Retrieving the audited KEIRA source..."
 if [[ -d "$APP_DIR/.git" ]]; then
   sudo git -C "$APP_DIR" fetch origin "$BRANCH"
   sudo git -C "$APP_DIR" checkout "$BRANCH"
@@ -75,21 +75,21 @@ cd "$APP_DIR"
 
 require_env_file
 
-echo "Installing, migrating, and building Portal..."
+echo "Installing, migrating, and building KEIRA..."
 pnpm install --frozen-lockfile
 pnpm db:push
 pnpm build
 
-echo "Starting Portal through PM2..."
-pm2 delete portal-sovereign 2>/dev/null || true
-pm2 start dist/index.js --name portal-sovereign --cwd "$APP_DIR" --update-env
+echo "Starting KEIRA through PM2..."
+pm2 delete keira-intelligence 2>/dev/null || true
+pm2 start dist/index.js --name keira-intelligence --cwd "$APP_DIR" --update-env
 pm2 save
 
 echo "Configuring the Nginx reverse proxy..."
-sudo tee /etc/nginx/sites-available/portal >/dev/null <<NGINX
+sudo tee /etc/nginx/sites-available/keira >/dev/null <<NGINX
 server {
     listen 80;
-    server_name ${PORTAL_DOMAIN};
+    server_name ${KEIRA_DOMAIN};
 
     location / {
         proxy_pass http://127.0.0.1:${APP_PORT};
@@ -101,14 +101,14 @@ server {
     }
 }
 NGINX
-sudo ln -sfn /etc/nginx/sites-available/portal /etc/nginx/sites-enabled/portal
+sudo ln -sfn /etc/nginx/sites-available/keira /etc/nginx/sites-enabled/keira
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
 
 echo
-echo "Portal is running locally at http://127.0.0.1:${APP_PORT}."
-echo "Verify with: curl -I http://127.0.0.1:${APP_PORT}/ && pm2 logs portal-sovereign --lines 50"
-echo "After the DNS A record for ${PORTAL_DOMAIN} points to this instance, issue TLS with:"
-echo "  sudo certbot --nginx -d ${PORTAL_DOMAIN}"
+echo "KEIRA is running locally at http://127.0.0.1:${APP_PORT}."
+echo "Verify with: curl -I http://127.0.0.1:${APP_PORT}/ && pm2 logs keira-intelligence --lines 50"
+echo "After the DNS A record for ${KEIRA_DOMAIN} points to this instance, issue TLS with:"
+echo "  sudo certbot --nginx -d ${KEIRA_DOMAIN}"
 echo "For startup after reboots, run the command printed by: pm2 startup"

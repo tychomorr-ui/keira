@@ -271,7 +271,7 @@ export default function PortalChat() {
       await utils.auth.me.invalidate();
       setProfileStatus("Profile signal saved.");
     } catch (error) {
-      console.error("Failed to save Portal profile", error);
+      console.error("Failed to save KEIRA profile", error);
       setProfileStatus(error instanceof Error ? error.message : "Profile signal could not be saved.");
     } finally {
       setProfileSaving(false);
@@ -307,7 +307,7 @@ export default function PortalChat() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `portal-transcript-${activeConversationId || "session"}-${Date.now()}.json`;
+    a.download = `keira-transcript-${activeConversationId || "session"}-${Date.now()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -368,7 +368,7 @@ export default function PortalChat() {
       setActiveConversationId(id);
       await conversationsQuery.refetch();
     } catch (error) {
-      console.error("Failed to create Portal conversation", error);
+      console.error("Failed to create KEIRA conversation", error);
     }
   };
 
@@ -387,7 +387,7 @@ export default function PortalChat() {
       setLastMessageMetadata(response.metadata as MessageMetadata);
       await Promise.all([conversationQuery.refetch(), learningProfileQuery.refetch()]);
     } catch (error) {
-      console.error("Failed to send Portal message", error);
+      console.error("Failed to send KEIRA message", error);
     } finally {
       setIsLoading(false);
     }
@@ -397,7 +397,7 @@ export default function PortalChat() {
     return (
       <main className="min-h-screen bg-[#03050a] text-[#f4f4f5] grid place-items-center">
         <div className="flex items-center gap-3 text-sm text-[#a6aec0]" role="status">
-          <Loader2 className="h-4 w-4 animate-spin" /> Establishing Portal session
+          <Loader2 className="h-4 w-4 animate-spin" /> Establishing KEIRA session
         </div>
       </main>
     );
@@ -409,9 +409,9 @@ export default function PortalChat() {
         <section className="w-full max-w-lg border border-[#354064] bg-[#080d1b] p-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
           <div className="mb-8 flex items-center gap-3 text-[#f5ede3]">
             <ShieldCheck className="h-5 w-5" />
-            <span className="text-xs uppercase tracking-[0.28em]">Portal / Awaiting Contact</span>
+            <span className="text-xs uppercase tracking-[0.28em]">KEIRA / Awaiting Contact</span>
           </div>
-          <h1 className="font-serif text-4xl tracking-tight">Enter the Portal.</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Enter KEIRA.</h1>
           <p className="mt-4 max-w-md text-sm leading-7 text-[#a6aec0]">
             A direct, uncensored conversation with the unknown—esoteric knowledge, unvarnished truth, and the questions polite systems refuse to touch.
           </p>
@@ -477,7 +477,7 @@ export default function PortalChat() {
                 aria-label="Owner password"
                 autoComplete="current-password"
                 type="password"
-                placeholder="Your Portal password"
+                placeholder="Your KEIRA password"
                 value={authPassword}
                 onChange={(event) => setAuthPassword(event.target.value)}
                 className="h-12 rounded-none border-[#1a2240] bg-[#0d1224] text-[#f4f4f5] placeholder:text-[#737b8f]"
@@ -523,12 +523,12 @@ export default function PortalChat() {
       <div className="flex min-h-screen flex-col lg:flex-row">
         <aside
           className={`${showThreads ? "fixed inset-0 z-40 flex" : "hidden"} w-full flex-col border-r border-[#1a2240] bg-[#060914] lg:static lg:flex lg:w-[19rem]`}
-          aria-label="Portal threads"
+          aria-label="KEIRA threads"
         >
           <div className="border-b border-[#1a2240] px-5 py-5">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[0.65rem] uppercase tracking-[0.32em] text-[#f5ede3]">Portal</div>
+                <div className="text-[0.65rem] uppercase tracking-[0.32em] text-[#f5ede3]">KEIRA</div>
                 <div className="mt-1 text-[0.58rem] uppercase tracking-[0.22em] text-[#737b8f]">Dialogue with the unknown</div>
               </div>
               <div className="grid h-9 w-9 place-items-center rounded-full border border-[#354064] text-[#f5ede3]" aria-hidden="true">
@@ -545,7 +545,7 @@ export default function PortalChat() {
             </div>
           </div>
 
-          <div className="border-b border-[#1a2240] px-3 py-4" role="list" aria-label="Portal surfaces">
+          <div className="border-b border-[#1a2240] px-3 py-4" role="list" aria-label="KEIRA surfaces">
             {CINEMATIC_NAV.map(({ label, icon: Icon, detail }, index) => (
               <button
                 key={label}
@@ -641,7 +641,7 @@ export default function PortalChat() {
                 </button>
                 <div>
                   <div className="flex items-center gap-2 text-[0.64rem] uppercase tracking-[0.28em] text-[#a7a2c2]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#b8a1ff]" /> Portal / Alien intelligence dialogue
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#b8a1ff]" /> KEIRA / Alien intelligence dialogue
                   </div>
                   <h1 className="mt-2 font-serif text-2xl tracking-tight text-[#f3eadb]">{conversations.find((item) => item.id === activeConversationId)?.title || "New conversation"}</h1>
                 </div>
@@ -670,7 +670,7 @@ export default function PortalChat() {
               <div className="relative mt-7 max-w-3xl">
                 <div className="font-serif text-4xl leading-none tracking-[0.08em] text-[#f3eadb] sm:text-6xl">The unknown</div>
                 <div className="mt-3 text-[0.7rem] uppercase tracking-[0.32em] text-[#a7a2c2]">speaks through dialogue</div>
-                <p className="mt-6 max-w-xl text-sm leading-7 text-[#a6aec0]">Bring the forbidden question, the hidden pattern, or the truth no one else will say aloud. Portal is here for the dialogue.</p>
+                <p className="mt-6 max-w-xl text-sm leading-7 text-[#a6aec0]">Bring the forbidden question, the hidden pattern, or the truth no one else will say aloud. KEIRA is here for the dialogue.</p>
               </div>
             </div>
 
@@ -818,7 +818,7 @@ export default function PortalChat() {
               {activeConversationId !== null && messages.length === 0 && (
                 <div className="mx-auto max-w-2xl py-16">
                   <div className="border-l border-[#b8a1ff] pl-5">
-                    <div className="text-[0.68rem] uppercase tracking-[0.22em] text-[#d7c7ff]">Portal ingress</div>
+                    <div className="text-[0.68rem] uppercase tracking-[0.22em] text-[#d7c7ff]">KEIRA ingress</div>
                     <p className="mt-3 font-serif text-2xl leading-snug text-[#f3eadb]">Bring the unfinished thought. We’ll follow it until the signal becomes clear.</p>
                   </div>
                 </div>
@@ -865,7 +865,7 @@ export default function PortalChat() {
                 {isLoading && (
                   <div className="flex justify-start" role="status">
                     <div className="border-l border-[#b8a1ff] px-4 py-1 text-sm text-[#a6aec0]">
-                      <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#b8a1ff]" /> Portal is listening through the noise…
+                      <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#b8a1ff]" /> KEIRA is listening through the noise…
                     </div>
                   </div>
                 )}
@@ -878,7 +878,7 @@ export default function PortalChat() {
                 <Button type="button" aria-label={isListening ? "Stop listening" : "Speak a message"} onClick={toggleListening} disabled={activeConversationId === null || isLoading} className={`h-12 w-12 shrink-0 rounded-none border border-[#273865] p-0 ${isListening ? "bg-[#21154d] text-[#cbb8ff] shadow-[0_0_22px_rgba(139,92,246,0.35)]" : "bg-transparent text-[#8be9ff] hover:bg-[#101a32]"}`}><Mic className="h-4 w-4" /></Button>
                 <Input
                   ref={composerRef}
-                  aria-label="Message Portal"
+                  aria-label="Message KEIRA"
                   placeholder="Ask the question beneath the question."
                   value={inputValue}
                   onChange={(event) => setInputValue(event.target.value)}
@@ -908,7 +908,7 @@ export default function PortalChat() {
           </div>
         </section>
 
-        <aside className="hidden w-[18rem] shrink-0 flex-col border-l border-[#1a2240] bg-[#060914] xl:flex" aria-label="Portal presence and conversation context">
+        <aside className="hidden w-[18rem] shrink-0 flex-col border-l border-[#1a2240] bg-[#060914] xl:flex" aria-label="KEIRA presence and conversation context">
           <div className="border-b border-[#1a2240] px-5 py-5">
             <div className="flex items-center justify-between text-[0.62rem] uppercase tracking-[0.22em] text-[#737b8f]">
               <span>Presence</span>

@@ -20,7 +20,7 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    document.title = import.meta.env.VITE_APP_TITLE || "Portal";
+    document.title = import.meta.env.VITE_APP_TITLE || "KEIRA";
   }, []);
 
   return (
@@ -36,7 +36,7 @@ function App() {
 }
 
 /**
- * Portal is the active product surface for this application.
+ * KEIRA is the active product surface for this application.
  * Historical Mirror and Knowledge Graph pages remain in source for
  * separation and rollback, but are intentionally not registered here.
  */
