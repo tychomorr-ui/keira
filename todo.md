@@ -142,3 +142,8 @@
 - [x] Securely configure a newly chosen custom private owner access key (`PORTAL_OWNER_ACCESS_TOKEN`)
 - [x] Restore the clean authentication owner-entry gate so authenticated sessions correctly unlock the fully functional protected chat API
 - [x] Run strict TypeScript compilation and pass all 109 Vitest tests successfully
+
+## Sovereign AWS Lightsail Portability & Fallback Hardening
+- [x] Eliminate Manus-specific reflection errors by replacing fallback strings with resilient sovereign dialogue prompts
+- [x] Create comprehensive `LIGHTSAIL_DEPLOYMENT_GUIDE.md` for independent self-hosted deployment on AWS Lightsail without platform paywalls
+- [x] Run strict TypeScript compilation and pass all 110 Vitest tests successfully

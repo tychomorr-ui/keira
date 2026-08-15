@@ -76,7 +76,7 @@ export async function generateAdaptiveResponse(
           ],
         });
         const fallbackContent = fallbackResponse.choices[0]?.message?.content;
-        portalResponse = typeof fallbackContent === "string" ? fallbackContent : "Portal reflection unavailable";
+        portalResponse = typeof fallbackContent === "string" ? fallbackContent : "The sovereign dialogue channel remains open. State your premise.";
         provider = "fallback";
       }
     } else {
@@ -87,7 +87,7 @@ export async function generateAdaptiveResponse(
         ],
       });
       const responseContent = response.choices[0]?.message?.content;
-      portalResponse = typeof responseContent === "string" ? responseContent : "Portal reflection unavailable";
+      portalResponse = typeof responseContent === "string" ? responseContent : "The sovereign dialogue channel remains open. State your premise.";
     }
 
     // Extract learning updates from response
