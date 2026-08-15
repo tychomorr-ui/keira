@@ -183,4 +183,4 @@
 - [x] Audit conversation, capabilities, voice, context, interface, and operational feedback as one coherent operator experience
 - [x] Implement prioritized high-value capability and conversation upgrades with endpoint and regression-test coverage
 - [x] Refine the KEIRA console and voice interaction experience without fabricating telemetry or adding decorative dead controls
-- [ ] Validate and publish the compound-upgraded KEIRA release before resuming São Paulo deployment
+- [x] Validate and publish the compound-upgraded KEIRA release before resuming São Paulo deployment
