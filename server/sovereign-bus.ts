@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { deterministicResponse, invokeLocal, isLocalModelConfigured, type LocalChatMessage } from "./local-gateway";
 import { ENV } from "./_core/env";
-import { getConfiguredLocalModelProvider, type ContextBoundary } from "./local-model";
+import { aggregateDataLeftLocalNode, getConfiguredLocalModelProvider, LocalProviderError, type ContextBoundary, type ProviderAttempt } from "./local-model";
 import { hardLockResponse, lockedResponseForQuestion } from "./keira-prompt";
 
 export type IntelligenceMode = "deterministic" | "local_model" | "local_tool" | "trusted_mesh" | "external";
@@ -18,6 +18,7 @@ export type IntelligenceReceipt = {
   context_sources: string[];
   external_service_used: boolean;
   data_left_local_node: boolean;
+  provider_attempts: ProviderAttempt[];
   policy: string;
   verification: string;
   result_state: string;
@@ -52,14 +53,19 @@ export type SovereignRuntimeStatus = {
   offlineMode: CapabilityState;
 };
 
-export function createReceipt(input: Omit<IntelligenceReceipt, "receipt_id" | "timestamp" | "external_service_used" | "data_left_local_node"> & Partial<Pick<IntelligenceReceipt, "external_service_used" | "data_left_local_node">>): IntelligenceReceipt {
+export function createReceipt(input: Omit<IntelligenceReceipt, "receipt_id" | "timestamp" | "external_service_used" | "data_left_local_node" | "provider_attempts"> & Partial<Pick<IntelligenceReceipt, "external_service_used" | "data_left_local_node" | "provider_attempts">>): IntelligenceReceipt {
   return {
     receipt_id: randomUUID(),
     timestamp: new Date().toISOString(),
     external_service_used: input.external_service_used ?? false,
     data_left_local_node: input.data_left_local_node ?? false,
+    provider_attempts: input.provider_attempts ?? [],
     ...input,
   };
+}
+
+function attemptsFromError(error: unknown): ProviderAttempt[] {
+  return error instanceof LocalProviderError ? [error.providerAttempt] : [];
 }
 
 export function validateReceipt(receipt: Partial<IntelligenceReceipt>): { valid: boolean; reason: string } {
@@ -67,6 +73,7 @@ export function validateReceipt(receipt: Partial<IntelligenceReceipt>): { valid:
   const missing = required.filter((field) => !receipt[field]);
   if (missing.length) return { valid: false, reason: `missing receipt fields: ${missing.join(", ")}` };
   if (!Array.isArray(receipt.context_sources)) return { valid: false, reason: "context_sources must be an array" };
+  if (!Array.isArray(receipt.provider_attempts)) return { valid: false, reason: "provider_attempts must be an array" };
   if (!receipt.receipt_id || !/^[0-9a-f-]{36}$/i.test(receipt.receipt_id)) return { valid: false, reason: "receipt_id is not a UUID" };
   return { valid: true, reason: "receipt contract complete" };
 }
@@ -163,15 +170,16 @@ export async function routeLocalConversation(input: {
         status: "ok",
         value: { content: response.content, modelId: response.modelId, provider: response.provider },
         external_fallback: false,
-        receipt: createReceipt({ operation, intelligence_mode: response.provider === "local" ? "local_model" : "deterministic", provider: response.provider, model: response.modelId, context_sources: contextSources, policy: "local model allowed; external providers disabled", verification: response.provider === "local" ? "local model generated inference; KEIRA verification required" : "deterministic fallback completed", result_state: response.provider === "local" ? "GENERATED_INFERENCE" : "PARTIALLY_PROVEN" }),
+        receipt: createReceipt({ operation, intelligence_mode: response.provider === "local" ? "local_model" : "deterministic", provider: response.provider, model: response.modelId, context_sources: contextSources, data_left_local_node: aggregateDataLeftLocalNode(response.providerAttempts ?? []), provider_attempts: response.providerAttempts ?? [], policy: "local model allowed; external providers disabled", verification: response.provider === "local" ? "local model generated inference; KEIRA verification required" : "deterministic fallback completed", result_state: response.provider === "local" ? "GENERATED_INFERENCE" : "PARTIALLY_PROVEN" }),
       };
     } catch (error) {
       const fallback = deterministicResponse(input);
+      const attempts = attemptsFromError(error);
       return {
         status: "ok",
         value: { content: fallback.content, modelId: fallback.modelId, provider: fallback.provider },
         external_fallback: false,
-        receipt: createReceipt({ operation, intelligence_mode: "deterministic", provider: "deterministic-engine", model: fallback.modelId, context_sources: contextSources, policy: "local model failure may use deterministic fallback; external providers disabled", verification: `local model failed; deterministic fallback completed (${error instanceof Error ? error.message : "unknown error"})`, result_state: "PARTIALLY_PROVEN" }),
+        receipt: createReceipt({ operation, intelligence_mode: "deterministic", provider: "deterministic-engine", model: fallback.modelId, context_sources: contextSources, data_left_local_node: aggregateDataLeftLocalNode(attempts), provider_attempts: attempts, policy: "local model failure may use deterministic fallback; external providers disabled", verification: `local model failed; deterministic fallback completed (${error instanceof Error ? error.message : "unknown error"})`, result_state: "PARTIALLY_PROVEN" }),
       };
     }
   }
@@ -215,14 +223,16 @@ export async function streamLocalConversation(
     };
   }
 
+  const attempts: ProviderAttempt[] = [];
   try {
     const primaryModel = input.model ?? ENV.localLlmModel;
     const models = [primaryModel, primaryModel, primaryModel, input.fallbackModel ?? ENV.localLlmFallbackModel].filter((model, index, all): model is string => Boolean(model) && all.indexOf(model) === index);
     let lastError: unknown;
     for (const model of models) {
       for (let attempt = 1; attempt <= (model === primaryModel ? 3 : 1); attempt += 1) {
+        let provider: ReturnType<typeof getConfiguredLocalModelProvider> | undefined;
         try {
-          const provider = getConfiguredLocalModelProvider(model);
+          provider = getConfiguredLocalModelProvider(model);
           const chunks: string[] = [];
           const question = [...input.messages].reverse().find((message) => message.role === "user")?.content.trim() ?? "";
           const locked = lockedResponseForQuestion(question);
@@ -241,8 +251,12 @@ export async function streamLocalConversation(
           const content = hardLockResponse(question, chunks.join(""));
           if (!content) throw new Error("LOCAL_MODEL_UNAVAILABLE: empty streamed response.");
           if (locked) onToken(content);
-          return { status: "ok", value: { content, modelId: model, provider: "local" }, external_fallback: false, receipt: createReceipt({ operation, intelligence_mode: "local_model", provider: "local", model, context_sources: contextSources, policy: "local model streaming allowed; external providers disabled", verification: model === primaryModel ? "local model streamed generated inference; KEIRA verification required" : "primary model failed; configured fallback model streamed generated inference", result_state: "GENERATED_INFERENCE" }) };
+          const completedAttempt = provider.getLastAttempt();
+          if (completedAttempt) attempts.push(completedAttempt);
+          return { status: "ok", value: { content, modelId: model, provider: "local" }, external_fallback: false, receipt: createReceipt({ operation, intelligence_mode: "local_model", provider: "local", model, context_sources: contextSources, data_left_local_node: aggregateDataLeftLocalNode(attempts), provider_attempts: attempts, policy: "local model streaming allowed; external providers disabled", verification: model === primaryModel ? "local model streamed generated inference; KEIRA verification required" : "primary model failed; configured fallback model streamed generated inference", result_state: "GENERATED_INFERENCE" }) };
         } catch (error) {
+          const failedAttempt = provider?.getLastAttempt() ?? (error instanceof LocalProviderError ? error.providerAttempt : null);
+          if (failedAttempt) attempts.push(failedAttempt);
           lastError = error;
         }
       }
@@ -255,7 +269,7 @@ export async function streamLocalConversation(
       status: "ok",
       value: { content: fallback.content, modelId: fallback.modelId, provider: fallback.provider },
       external_fallback: false,
-      receipt: createReceipt({ operation, intelligence_mode: "deterministic", provider: "deterministic-engine", model: fallback.modelId, context_sources: contextSources, policy: "local stream failure may use deterministic fallback; external providers disabled", verification: `local model stream failed; deterministic fallback completed (${error instanceof Error ? error.message : "unknown error"})`, result_state: "PARTIALLY_PROVEN" }),
+      receipt: createReceipt({ operation, intelligence_mode: "deterministic", provider: "deterministic-engine", model: fallback.modelId, context_sources: contextSources, data_left_local_node: aggregateDataLeftLocalNode(attempts), provider_attempts: attempts, policy: "local stream failure may use deterministic fallback; external providers disabled", verification: `local model stream failed; deterministic fallback completed (${error instanceof Error ? error.message : "unknown error"})`, result_state: "PARTIALLY_PROVEN" }),
     };
   }
 }

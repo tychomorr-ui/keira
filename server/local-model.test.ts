@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ENV } from "./_core/env";
-import { GOVERNED_JSON_GBNF, LocalModelRegistry, OpenAiCompatibleLocalProvider } from "./local-model";
+import { GOVERNED_JSON_GBNF, LocalProviderError, LocalModelRegistry, OpenAiCompatibleLocalProvider } from "./local-model";
 import { KEIRA_SYSTEM_PROMPT } from "./keira-prompt";
 
 const originalFetch = globalThis.fetch;
@@ -94,6 +94,27 @@ describe("Stage 3 local model provider", () => {
     await expect(pending).rejects.toThrow("timed out or was cancelled");
     expect(provider.estimateUsage({ system: "1234", messages: [] }).inputTokens).toBe(1);
     expect(provider.cancel("missing-request")).toBe(false);
+  });
+
+  it("records a transmitted remote attempt and marks locality after the request boundary", async () => {
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ choices: [{ message: { content: "remote answer" } }] }), { status: 200 })) as typeof fetch;
+    const provider = new OpenAiCompatibleLocalProvider("http://10.9.0.1:11434/v1", "model", "ollama");
+    const result = await provider.generate({ system: "system", messages: [{ role: "user", content: "hello" }] });
+    expect(result.providerAttempts).toHaveLength(1);
+    expect(result.providerAttempts[0]).toMatchObject({ outcome: "GENERATED", transmitted: true, local: true, dataLeftLocalNode: true });
+    expect(result.dataLeftLocalNode).toBe(true);
+  });
+
+  it("retains the attempt ledger when a remote request fails after transmission", async () => {
+    globalThis.fetch = vi.fn(async () => { throw new Error("connection reset"); }) as typeof fetch;
+    const provider = new OpenAiCompatibleLocalProvider("http://10.9.0.1:11434/v1", "model", "ollama");
+    try {
+      await provider.generate({ system: "system", messages: [{ role: "user", content: "hello" }] });
+      throw new Error("expected provider failure");
+    } catch (error) {
+      expect(error).toBeInstanceOf(LocalProviderError);
+      expect((error as LocalProviderError).providerAttempt).toMatchObject({ transmitted: true, local: true, dataLeftLocalNode: true, outcome: "CONNECTION_REFUSED" });
+    }
   });
 
   it("stores registry entries without assuming configured models exist", () => {

@@ -1,5 +1,5 @@
 import { ENV } from "./_core/env";
-import { getConfiguredLocalModelProvider, type ContextBoundary } from "./local-model";
+import { getConfiguredLocalModelProvider, type ContextBoundary, type ProviderAttempt } from "./local-model";
 import { hardLockResponse, KEIRA_SYSTEM_PROMPT } from "./keira-prompt";
 
 export type LocalRole = "system" | "user" | "assistant";
@@ -28,6 +28,7 @@ export type LocalGatewayResponse = {
     totalTokens?: number;
   };
   provider: "local" | "deterministic";
+  providerAttempts: ProviderAttempt[];
 };
 
 export function isLocalModelConfigured(): boolean {
@@ -84,6 +85,7 @@ export function deterministicResponse(request: LocalGatewayRequest): LocalGatewa
     modelId: "deterministic-v1",
     stopReason: "stop",
     provider: "deterministic",
+    providerAttempts: [],
     usage: { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens },
   };
 }
@@ -132,6 +134,7 @@ async function invokeOpenAiCompatible(request: LocalGatewayRequest): Promise<Loc
       modelId: ENV.localLlmModel,
       stopReason: payload.choices?.[0]?.finish_reason,
       provider: "local",
+      providerAttempts: [],
       usage: payload.usage
         ? {
             inputTokens: payload.usage.prompt_tokens,
@@ -158,6 +161,7 @@ export async function invokeLocal(request: LocalGatewayRequest): Promise<LocalGa
     modelId: response.modelId,
     stopReason: response.stopReason,
     provider: "local",
+    providerAttempts: response.providerAttempts,
     usage: response.usage,
   };
 }

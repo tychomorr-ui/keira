@@ -39,6 +39,42 @@ export type ModelHealth = {
   checkedAt: string;
 };
 
+export type ProviderAttemptOutcome =
+  | "GENERATED"
+  | "CONNECTION_REFUSED"
+  | "CONNECTION_TIMEOUT"
+  | "HTTP_ERROR"
+  | "MALFORMED_RESPONSE"
+  | "EMPTY_RESPONSE"
+  | "STREAM_INTERRUPTED"
+  | "CANCELLED";
+
+export type ProviderAttempt = {
+  providerId: string;
+  modelId: string | null;
+  startedAt: string;
+  completedAt: string;
+  outcome: ProviderAttemptOutcome;
+  transmitted: boolean;
+  local: boolean;
+  dataLeftLocalNode: boolean;
+  errorCode?: string;
+};
+
+export function aggregateDataLeftLocalNode(attempts: readonly ProviderAttempt[]): boolean {
+  return attempts.some((attempt) => attempt.dataLeftLocalNode);
+}
+
+export class LocalProviderError extends Error {
+  readonly providerAttempt: ProviderAttempt;
+
+  constructor(message: string, providerAttempt: ProviderAttempt) {
+    super(message);
+    this.name = "LocalProviderError";
+    this.providerAttempt = providerAttempt;
+  }
+}
+
 export type ModelRequest = {
   system: string;
   messages: LocalChatMessage[];
@@ -60,6 +96,7 @@ export type ModelResult = {
   endpointClass: ModelEndpointClass;
   local: boolean;
   dataLeftLocalNode: boolean;
+  providerAttempts: ProviderAttempt[];
   resultState: "GENERATED_INFERENCE";
   latencyMs: number;
   usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number };
@@ -113,6 +150,7 @@ export class OpenAiCompatibleLocalProvider implements LocalModelProvider {
   private readonly endpoint: string;
   private readonly model: string;
   private readonly runtime: string;
+  private lastAttempt: ProviderAttempt | null = null;
 
   constructor(endpoint = ENV.localLlmBaseUrl, model = ENV.localLlmModel, runtime = ENV.localLlmRuntime || "openai-compatible") {
     this.endpoint = endpoint.replace(/\/$/, "");
@@ -121,6 +159,8 @@ export class OpenAiCompatibleLocalProvider implements LocalModelProvider {
   }
 
   capabilities(): readonly ModelCapability[] { return ["generate", "stream", "health", "model_info", "cancel", "estimate_usage"]; }
+
+  getLastAttempt(): ProviderAttempt | null { return this.lastAttempt ? { ...this.lastAttempt } : null; }
 
   estimateUsage(request: ModelRequest) {
     const inputTokens = Math.max(1, Math.ceil(`${request.system}\n${request.messages.map((message) => message.content).join("\n")}`.trim().length / 4));
@@ -144,9 +184,22 @@ export class OpenAiCompatibleLocalProvider implements LocalModelProvider {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), ENV.localLlmTimeoutMs);
     const started = Date.now();
+    const attempt: ProviderAttempt = {
+      providerId: providerName(this.runtime),
+      modelId: this.model,
+      startedAt: new Date(started).toISOString(),
+      completedAt: new Date(started).toISOString(),
+      outcome: "CONNECTION_REFUSED",
+      transmitted: false,
+      local: true,
+      dataLeftLocalNode: false,
+    };
     this.active.set(requestId, controller);
     if (request.signal) request.signal.addEventListener("abort", () => controller.abort(), { once: true });
     try {
+      // Once fetch receives the body, a later timeout may have transmitted data.
+      attempt.transmitted = true;
+      attempt.dataLeftLocalNode = endpointClass(this.endpoint) !== "LOCAL_LOOPBACK";
       const response = await fetch(`${this.endpoint}/chat/completions`, {
         method: "POST",
         signal: controller.signal,
@@ -163,15 +216,32 @@ export class OpenAiCompatibleLocalProvider implements LocalModelProvider {
           ...(request.grammar ? { grammar: request.grammar } : {}),
         }),
       });
-      if (!response.ok) throw new Error(`LOCAL_MODEL_UNAVAILABLE: runtime returned HTTP ${response.status}.`);
+      if (!response.ok) {
+        attempt.outcome = "HTTP_ERROR";
+        attempt.errorCode = `HTTP_${response.status}`;
+        throw new LocalProviderError(`LOCAL_MODEL_UNAVAILABLE: runtime returned HTTP ${response.status}.`, { ...attempt, completedAt: new Date().toISOString() });
+      }
       const payload = await response.json() as { choices?: Array<{ message?: { content?: unknown }; finish_reason?: string }>; usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } };
       const content = payload.choices?.[0]?.message?.content;
-      if (typeof content !== "string" || !content.trim()) throw new Error("LOCAL_MODEL_UNAVAILABLE: malformed or empty model response.");
+      if (typeof content !== "string") {
+        attempt.outcome = "MALFORMED_RESPONSE";
+        throw new LocalProviderError("LOCAL_MODEL_UNAVAILABLE: malformed model response.", { ...attempt, completedAt: new Date().toISOString() });
+      }
+      if (!content.trim()) {
+        attempt.outcome = "EMPTY_RESPONSE";
+        throw new LocalProviderError("LOCAL_MODEL_UNAVAILABLE: empty model response.", { ...attempt, completedAt: new Date().toISOString() });
+      }
       const question = [...request.messages].reverse().find((message) => message.role === "user")?.content ?? "";
-      return { requestId, content: hardLockResponse(question, content.trim()), modelId: this.model, provider: providerName(this.runtime), endpointClass: endpointClass(this.endpoint), local: true, dataLeftLocalNode: false, resultState: "GENERATED_INFERENCE", latencyMs: Date.now() - started, stopReason: payload.choices?.[0]?.finish_reason, usage: payload.usage ? { inputTokens: payload.usage.prompt_tokens, outputTokens: payload.usage.completion_tokens, totalTokens: payload.usage.total_tokens } : undefined };
+      attempt.outcome = "GENERATED";
+      attempt.completedAt = new Date().toISOString();
+      return { requestId, content: hardLockResponse(question, content.trim()), modelId: this.model, provider: providerName(this.runtime), endpointClass: endpointClass(this.endpoint), local: true, dataLeftLocalNode: aggregateDataLeftLocalNode([attempt]), providerAttempts: [attempt], resultState: "GENERATED_INFERENCE", latencyMs: Date.now() - started, stopReason: payload.choices?.[0]?.finish_reason, usage: payload.usage ? { inputTokens: payload.usage.prompt_tokens, outputTokens: payload.usage.completion_tokens, totalTokens: payload.usage.total_tokens } : undefined };
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw new Error("LOCAL_MODEL_UNAVAILABLE: local model request timed out or was cancelled.");
-      throw error;
+      if (error instanceof LocalProviderError) throw error;
+      attempt.outcome = error instanceof DOMException && error.name === "AbortError" ? "CONNECTION_TIMEOUT" : "CONNECTION_REFUSED";
+      attempt.errorCode = attempt.outcome;
+      attempt.completedAt = new Date().toISOString();
+      if (error instanceof DOMException && error.name === "AbortError") throw new LocalProviderError("LOCAL_MODEL_UNAVAILABLE: local model request timed out or was cancelled.", attempt);
+      throw new LocalProviderError(error instanceof Error ? error.message : "LOCAL_MODEL_UNAVAILABLE: local model request failed.", attempt);
     } finally {
       clearTimeout(timeout);
       this.active.delete(requestId);
@@ -187,10 +257,24 @@ export class OpenAiCompatibleLocalProvider implements LocalModelProvider {
     const requestId = randomUUID();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), ENV.localLlmTimeoutMs);
+    const started = Date.now();
+    const attempt: ProviderAttempt = {
+      providerId: providerName(this.runtime),
+      modelId: this.model,
+      startedAt: new Date(started).toISOString(),
+      completedAt: new Date(started).toISOString(),
+      outcome: "CONNECTION_REFUSED",
+      transmitted: false,
+      local: true,
+      dataLeftLocalNode: false,
+    };
+    this.lastAttempt = attempt;
     this.active.set(requestId, controller);
     if (request.signal) request.signal.addEventListener("abort", () => controller.abort(), { once: true });
 
     try {
+      attempt.transmitted = true;
+      attempt.dataLeftLocalNode = endpointClass(this.endpoint) !== "LOCAL_LOOPBACK";
       const response = await fetch(`${this.endpoint}/chat/completions`, {
         method: "POST",
         signal: controller.signal,
@@ -206,8 +290,15 @@ export class OpenAiCompatibleLocalProvider implements LocalModelProvider {
           stream: true,
         }),
       });
-      if (!response.ok) throw new Error(`LOCAL_MODEL_UNAVAILABLE: runtime returned HTTP ${response.status}.`);
-      if (!response.body) throw new Error("LOCAL_MODEL_UNAVAILABLE: runtime returned no streaming body.");
+      if (!response.ok) {
+        attempt.outcome = "HTTP_ERROR";
+        attempt.errorCode = `HTTP_${response.status}`;
+        throw new LocalProviderError(`LOCAL_MODEL_UNAVAILABLE: runtime returned HTTP ${response.status}.`, { ...attempt, completedAt: new Date().toISOString() });
+      }
+      if (!response.body) {
+        attempt.outcome = "STREAM_INTERRUPTED";
+        throw new LocalProviderError("LOCAL_MODEL_UNAVAILABLE: runtime returned no streaming body.", { ...attempt, completedAt: new Date().toISOString() });
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -245,10 +336,19 @@ export class OpenAiCompatibleLocalProvider implements LocalModelProvider {
         emitted = true;
         yield finalToken;
       }
-      if (!emitted) throw new Error("LOCAL_MODEL_UNAVAILABLE: runtime returned an empty stream.");
+      if (!emitted) {
+        attempt.outcome = "EMPTY_RESPONSE";
+        throw new LocalProviderError("LOCAL_MODEL_UNAVAILABLE: runtime returned an empty stream.", { ...attempt, completedAt: new Date().toISOString() });
+      }
+      attempt.outcome = "GENERATED";
+      attempt.completedAt = new Date().toISOString();
     } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw new Error("LOCAL_MODEL_UNAVAILABLE: local model stream timed out or was cancelled.");
-      throw error;
+      if (error instanceof LocalProviderError) throw error;
+      attempt.outcome = error instanceof DOMException && error.name === "AbortError" ? "CONNECTION_TIMEOUT" : "STREAM_INTERRUPTED";
+      attempt.errorCode = attempt.outcome;
+      attempt.completedAt = new Date().toISOString();
+      if (error instanceof DOMException && error.name === "AbortError") throw new LocalProviderError("LOCAL_MODEL_UNAVAILABLE: local model stream timed out or was cancelled.", attempt);
+      throw new LocalProviderError(error instanceof Error ? error.message : "LOCAL_MODEL_UNAVAILABLE: local model stream failed.", attempt);
     } finally {
       clearTimeout(timeout);
       this.active.delete(requestId);
