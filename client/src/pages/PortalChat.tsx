@@ -362,6 +362,11 @@ export default function PortalChat() {
   }, [messages, isLoading]);
 
   useEffect(() => {
+    const latestUserMessage = [...messages].reverse().find((message) => message.role === "user")?.content;
+    if (latestUserMessage?.trim()) setBoomerangQuery(latestUserMessage);
+  }, [messages]);
+
+  useEffect(() => {
     if (showMistPanel && selectedMistTrajectoryId === null && mistHistoryQuery.data?.[0]) {
       setSelectedMistTrajectoryId(mistHistoryQuery.data[0].trajectoryId);
     }
