@@ -219,6 +219,9 @@ ANSWER QUALITY BOUNDARIES:
   // Context injection
   lines.push(formatContextForLLM(context));
   lines.push(formatContextForStrategy(strategy.strategy, context));
+  lines.push(`
+LOCAL RAG CONTRACT:
+Use the retrieved EVIDENCE ARTIFACTS placed immediately before the operator question. Answer factual corpus questions only from those chunks and cite their CIDs. If no chunk supports the answer, say "No corpus match" and limit the answer to the active conversation context. Do not invent document contents.`);
 
   return lines.join("\n");
 }

@@ -14,6 +14,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { signTrajectoryHandler } from "../trajectory-attestation";
 import { streamPortalMessage } from "../portal-chat-stream";
 import { getLocalModelEnvironmentStatus } from "./env";
+import { searchStoredCorpusEvidence } from "../corpus-ingestion";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -47,8 +48,9 @@ async function startServer() {
     }
     next();
   });
-  app.use(express.json({ limit: "1mb" }));
-  app.use(express.urlencoded({ limit: "1mb", extended: true }));
+  // Keep uploads bounded while allowing the 2 MB corpus-ingestion contract.
+  app.use(express.json({ limit: "4mb" }));
+  app.use(express.urlencoded({ limit: "4mb", extended: true }));
   registerStorageProxy(app);
   app.get("/api/beta-status", betaOpenStatusHandler);
   app.get("/api/keira-identity/health", keiraIdentityRootSecretHealthHandler);
@@ -81,6 +83,26 @@ async function startServer() {
       writeEvent("error", { error: error instanceof Error ? error.message : "KEIRA could not complete the request." });
     } finally {
       res.end();
+    }
+  });
+  app.get("/api/portal/corpus/search", async (req, res) => {
+    const context = await createContext({ req, res, info: { isBatchCall: false } as any });
+    if (!context.user) {
+      res.status(401).json({ error: "Authentication required." });
+      return;
+    }
+    const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (!query) {
+      res.status(400).json({ error: "Query parameter q is required." });
+      return;
+    }
+    const requestedLimit = typeof req.query.limit === "string" ? Number(req.query.limit) : 8;
+    const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(12, Math.floor(requestedLimit))) : 8;
+    try {
+      const evidence = await searchStoredCorpusEvidence(context.user.id, query, limit);
+      res.json({ query, evidence, count: evidence.length, source: "keiraCorpusVectors" });
+    } catch (error) {
+      res.status(503).json({ error: error instanceof Error ? error.message : "Corpus search unavailable." });
     }
   });
   // Public identity material contains KEIRA's public key and signed receipt only.
