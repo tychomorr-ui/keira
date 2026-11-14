@@ -1,0 +1,1 @@
+ALTER TABLE `keiraCorpusVectors` MODIFY COLUMN `contentSha256` varchar(64);

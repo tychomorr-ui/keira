@@ -1,4 +1,4 @@
-import { int, longtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, longtext, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -89,8 +89,16 @@ export const keiraCorpusVectors = mysqlTable("keiraCorpusVectors", {
   filename: varchar("filename", { length: 255 }).notNull(),
   content: longtext("content").notNull(),
   vectorJson: longtext("vectorJson").notNull(),
+  embeddingModel: varchar("embeddingModel", { length: 128 }).default("nomic-embed-text").notNull(),
+  embeddingVersion: varchar("embeddingVersion", { length: 32 }).default("1.0").notNull(),
+  embeddingDimension: int("embeddingDimension").default(768).notNull(),
+  embeddingRuntime: varchar("embeddingRuntime", { length: 32 }).default("ollama").notNull(),
+  contentSha256: varchar("contentSha256", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  userDocumentIdx: index("keiraCorpusVectorsUserDocumentIdx").on(table.userId, table.documentId),
+  embeddingProfileIdx: index("keiraCorpusVectorsEmbeddingProfileIdx").on(table.userId, table.embeddingModel, table.embeddingDimension),
+}));
 export type KeiraCorpusVector = typeof keiraCorpusVectors.$inferSelect;
 export type InsertKeiraCorpusVector = typeof keiraCorpusVectors.$inferInsert;
 

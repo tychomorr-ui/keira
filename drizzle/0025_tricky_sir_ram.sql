@@ -1,0 +1,2 @@
+CREATE INDEX `keiraCorpusVectorsUserDocumentIdx` ON `keiraCorpusVectors` (`userId`,`documentId`);--> statement-breakpoint
+CREATE INDEX `keiraCorpusVectorsEmbeddingProfileIdx` ON `keiraCorpusVectors` (`userId`,`embeddingModel`,`embeddingDimension`);

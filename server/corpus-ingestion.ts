@@ -5,6 +5,7 @@ import { getDb } from "./db";
 import { keiraCorpusVectors } from "../drizzle/schema";
 import { and, eq } from "drizzle-orm";
 import { generateEmbedding } from "./local-embedding-provider";
+import { runHydraSearch } from "./hydra-search";
 
 const VECTOR_DIMENSION = 768;
 
@@ -21,12 +22,14 @@ function localVector(text: string): number[] {
   return magnitude > 0 ? vector.map((value) => value / magnitude) : vector;
 }
 
-async function embedWithFallback(text: string): Promise<number[]> {
+async function embedWithFallback(text: string): Promise<{ vector: number[]; runtime: "ollama" | "deterministic-fallback" }> {
   try {
     const vector = await generateEmbedding(text);
-    return vector.length === VECTOR_DIMENSION ? vector : localVector(text);
+    return vector.length === VECTOR_DIMENSION
+      ? { vector, runtime: "ollama" }
+      : { vector: localVector(text), runtime: "deterministic-fallback" };
   } catch {
-    return localVector(text);
+    return { vector: localVector(text), runtime: "deterministic-fallback" };
   }
 }
 
@@ -36,7 +39,7 @@ export type IngestedCorpusDocument = CorpusIngestResult & {
     model: "nomic-embed-text";
     modelVersion: "1.0";
     dimension: number;
-    runtime: "ollama";
+    runtime: "ollama" | "deterministic-fallback";
   };
 };
 
@@ -55,12 +58,15 @@ export async function ingestCorpusDocument(input: {
     source: "operator-upload",
   });
   const embeddings: CorpusEmbedding[] = [];
+  let embeddingRuntime: "ollama" | "deterministic-fallback" = "ollama";
   for (const chunk of result.chunks) {
+    const embedded = await embedWithFallback(chunk.content);
+    if (embedded.runtime === "deterministic-fallback") embeddingRuntime = embedded.runtime;
     embeddings.push({
       chunkCid: chunk.cid,
       model: "nomic-embed-text",
       modelVersion: "1.0",
-      vector: await embedWithFallback(chunk.content),
+      vector: embedded.vector,
       createdAt: chunk.createdAt,
       schemaVersion: "1.0.0",
     });
@@ -72,7 +78,7 @@ export async function ingestCorpusDocument(input: {
       model: "nomic-embed-text",
       modelVersion: "1.0",
       dimension: VECTOR_DIMENSION,
-      runtime: "ollama",
+      runtime: embeddingRuntime,
     },
   };
   if (userId !== undefined) {
@@ -90,6 +96,11 @@ export async function ingestCorpusDocument(input: {
         filename: stored.document.metadata.filename,
         content: chunk.content,
         vectorJson: JSON.stringify(stored.embeddings.find((embedding) => embedding.chunkCid === chunk.cid)?.vector ?? []),
+        embeddingModel: stored.embedding.model,
+        embeddingVersion: stored.embedding.modelVersion,
+        embeddingDimension: VECTOR_DIMENSION,
+        embeddingRuntime: stored.embedding.runtime,
+        contentSha256: createHash("sha256").update(chunk.content, "utf8").digest("hex"),
       })));
     }
   }
@@ -111,26 +122,23 @@ function cosine(left: number[], right: number[]): number {
 }
 
 export async function searchStoredCorpusEvidence(userId: number, query: string, limit = 8): Promise<Array<{ cid: string; snippet: string; score: number }>> {
-  const queryVector = await embedWithFallback(query);
   const records = Array.from(corpusByUser.get(userId)?.values() ?? []);
-  const memoryResults = records.flatMap((record) => record.chunks.map((chunk) => {
+  const memoryRows = records.flatMap((record) => record.chunks.map((chunk) => {
     const embedding = record.embeddings.find((item) => item.chunkCid === chunk.cid);
-    return embedding ? { cid: chunk.cid, snippet: chunk.content, score: cosine(queryVector, embedding.vector) } : null;
-  })).filter((item): item is { cid: string; snippet: string; score: number } => item !== null)
-    .sort((left, right) => right.score - left.score || left.cid.localeCompare(right.cid))
-    .slice(0, Math.max(1, Math.min(12, limit)));
+    return embedding ? { artifactCid: chunk.cid, filename: record.document.metadata.filename, content: chunk.content, vectorJson: JSON.stringify(embedding.vector) } : null;
+  })).filter((item): item is { artifactCid: string; filename: string; content: string; vectorJson: string } => item !== null);
   const db = await getDb();
   if (db) {
-    const rows = await db.select().from(keiraCorpusVectors).where(eq(keiraCorpusVectors.userId, userId));
-    const durableResults = rows.map((row) => {
-      try {
-        return { cid: row.artifactCid, snippet: row.content, score: cosine(queryVector, JSON.parse(row.vectorJson) as number[]) };
-      } catch {
-        return null;
-      }
-    }).filter((item): item is { cid: string; snippet: string; score: number } => item !== null)
-      .sort((left, right) => right.score - left.score || left.cid.localeCompare(right.cid));
-    if (durableResults.length) return durableResults.slice(0, Math.max(1, Math.min(12, limit)));
+    const rows = await db.select({ artifactCid: keiraCorpusVectors.artifactCid, filename: keiraCorpusVectors.filename, content: keiraCorpusVectors.content, vectorJson: keiraCorpusVectors.vectorJson, embeddingDimension: keiraCorpusVectors.embeddingDimension, contentSha256: keiraCorpusVectors.contentSha256 })
+      .from(keiraCorpusVectors).where(eq(keiraCorpusVectors.userId, userId));
+    const validRows = rows.filter((row) => row.embeddingDimension === VECTOR_DIMENSION && createHash("sha256").update(row.content, "utf8").digest("hex") === row.contentSha256);
+    if (validRows.length) {
+      const hydra = await runHydraSearch(validRows, query, { limit: Math.max(1, Math.min(12, limit)) });
+      const byId = new Map(validRows.map((row) => [row.artifactCid, row]));
+      return hydra.fusion.map((entry) => ({ cid: entry.id, snippet: byId.get(entry.id)!.content, score: entry.score }));
+    }
   }
-  return memoryResults;
+  const hydra = await runHydraSearch(memoryRows, query, { limit: Math.max(1, Math.min(12, limit)) });
+  const byId = new Map(memoryRows.map((row) => [row.artifactCid, row]));
+  return hydra.fusion.map((entry) => ({ cid: entry.id, snippet: byId.get(entry.id)!.content, score: entry.score }));
 }
