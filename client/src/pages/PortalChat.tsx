@@ -1236,6 +1236,19 @@ export default function PortalChat() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <p className="max-w-2xl text-xs leading-6 text-[#737b8f]">MIST and Boomerang execute against the authenticated durable corpus. The radar and telemetry below are populated only by persisted server results.</p>
+                  <Input
+                    value={boomerangQuery}
+                    onChange={(event) => setBoomerangQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && boomerangQuery.trim() && !executeBoomerangMutation.isPending) {
+                        event.preventDefault();
+                        void handleRunBoomerang();
+                      }
+                    }}
+                    placeholder="Enter a corpus question for Boomerang"
+                    aria-label="Boomerang query"
+                    className="min-w-[min(100%,24rem)] flex-1 rounded-none border-[#46608f] bg-[#0d1630] text-[#f3eadb] placeholder:text-[#737b8f]"
+                  />
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" onClick={() => void handleRunBoomerang()} disabled={!boomerangQuery.trim() || executeBoomerangMutation.isPending} className="rounded-none bg-[#cbb8ff] text-[#120a24] hover:bg-[#e4d9ff]">
                       {executeBoomerangMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Activity className="mr-2 h-4 w-4" />}
