@@ -2,7 +2,7 @@
 
 KEIRA is the sovereign ecosystem's dedicated conversational intelligence node. It provides direct, long-context dialogue, adaptive persona manifestation, esoteric keyword awareness, secure first-party sessions, optional browser voice interaction, encrypted transcript export, and a self-hosted local inference path with a deterministic offline fallback.
 
-KEIRA is intentionally distinct from its sibling systems: Tesseract-A provides the mirror and recovery entity experience, including the KEIRA$KHAOS mode; Root provides sovereign identity; XinUS Clarity provides practical public-service workflows; and Cosmic Net / Tesseract Terminus provides the network and universal-truth console.
+KEIRA is intentionally distinct from its sibling systems: Tesseract-A provides the mirror and recovery entity experience, including the KEIRA$KHAOS mode; Root provides sovereign identity; XinUS Clarity provides practical public-service workflows; and Cosmic Net / Quantus provides the network and universal-truth console.
 
 ## Runtime Architecture
 
