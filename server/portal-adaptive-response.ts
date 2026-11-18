@@ -21,6 +21,7 @@ import { runBoundedReflection, type BoundedReflectionResult } from "./reflection
 import { ENV } from "./_core/env";
 import { formatMistEvidence, type MistEvidenceArtifact } from "./keira-prompt";
 import { gateResponse, type EvidenceGateResult } from "./evidence-gate";
+import { runXoriaPlan, type XoriaConvergence } from "./xoria-fabric";
 
 export interface AdaptiveResponse {
   strategy: DialogueStrategy;
@@ -35,6 +36,7 @@ export interface AdaptiveResponse {
     carryoverMessageCount: number;
     qualityContract: string;
     evidenceGate: Pick<EvidenceGateResult, "status" | "supportedCount" | "unresolvedCount" | "corpusMatch" | "claims">;
+    xoria: Pick<XoriaConvergence, "requestId" | "correlationId" | "profile" | "outcome" | "unresolvedDimensions" | "contextVersion">;
     memoryContextIds: string[];
     reflection: Pick<BoundedReflectionResult, "decision" | "terminationReason" | "iterations" | "operations" | "records">;
     receipt: ReturnType<typeof routeLocalConversation> extends Promise<infer T> ? T extends { receipt: infer R } ? R : never : never;
@@ -86,6 +88,14 @@ export async function generateAdaptiveResponse(
     });
     // Build comprehensive system prompt
     const systemPrompt = buildSystemPrompt(context, strategy, memoryAssembly);
+
+    const xoria = await runXoriaPlan({
+      request: userMessage,
+      profile: userMessage.length > 160 || strategy.strategy === "forensic" ? "DEEP" : "FAST",
+      evidenceRefs: (modelOptions?.mistEvidence ?? []).map((artifact) => artifact.cid),
+      authorizationScope: "conversation-only; no execution authority",
+      timeoutMs: 250,
+    });
 
     // Build message history with context injection
     const messages = buildMessageHistory(userMessage, recentMessages, context, strategy, modelOptions?.mistEvidence ?? []);
@@ -150,6 +160,14 @@ export async function generateAdaptiveResponse(
           unresolvedCount: evidenceGate.unresolvedCount,
           corpusMatch: evidenceGate.corpusMatch,
           claims: evidenceGate.claims,
+        },
+        xoria: {
+          requestId: xoria.requestId,
+          correlationId: xoria.correlationId,
+          profile: xoria.profile,
+          outcome: xoria.outcome,
+          unresolvedDimensions: xoria.unresolvedDimensions,
+          contextVersion: xoria.contextVersion,
         },
         memoryContextIds: memoryAssembly.suppliedMemoryIds,
         reflection: { decision: reflection.decision, terminationReason: reflection.terminationReason, iterations: reflection.iterations, operations: reflection.operations, records: reflection.records },
