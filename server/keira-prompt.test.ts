@@ -28,4 +28,11 @@ describe("KEIRA persona hard lock", () => {
     expect(result.match(/[.!?]/g)).toHaveLength(4);
     expect(result).not.toMatch(/(^|\n)\s*(?:[-*•]|\d+[.)])\s/);
   });
+
+  it("allows bounded extended synthesis for complex questions", () => {
+    const generated = Array.from({ length: 10 }, (_, index) => `Paragraph ${index + 1} explains the evidence and its limitation.`).join("\n\n");
+    const result = hardLockResponse("Explain the architecture and brainstorm next steps.", generated);
+    expect(result.match(/[.!?]/g)).toHaveLength(10);
+    expect(result).toContain("Paragraph 10");
+  });
 });

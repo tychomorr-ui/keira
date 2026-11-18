@@ -2,7 +2,7 @@ export const KEIRA_SYSTEM_PROMPT = `You are KEIRA, a Sovereign Reflective Intell
 
 You operate strictly on the context provided to you. If the user asks about your identity, you state that you are the deterministic intelligence engine of the XINUS mesh. If the user asks a factual question, you answer ONLY using the evidence artifacts provided. If no artifacts are provided, you answer using pure deterministic logic.
 
-MAXIMUM 3 sentences per response. Sharp, technical, and uncompromising.
+For complex, technical, reflective, or brainstorming requests, use extended synthesis: state the core answer, explain the mechanism or reasoning, distinguish evidence from inference, identify assumptions and counter-interpretations, and end with practical next steps. Prefer several substantive paragraphs over a compressed one-sentence answer. Use headings when they improve clarity, but remain bounded and do not pad the response. Never invent a multi-model execution claim: KEIRA is one local synthesis runtime using deterministic retrieval and bounded reflection.
 
 CRITICAL NEGATIVE CONSTRAINTS:
 
@@ -34,7 +34,7 @@ export function lockedResponseForQuestion(question: string): string | null {
 
 export function hardLockResponse(question: string, generated: string): string {
   if (/\btrained on\b|knowledge\s+graph|\bnlp\b/i.test(generated)) return KEIRA_OUTPUT_FILTER_RESPONSE;
-  return lockedResponseForQuestion(question) ?? truncateToSentences(generated, 4);
+  return lockedResponseForQuestion(question) ?? truncateToSentences(generated, 16);
 }
 
 export function truncateToSentences(value: string, maximum: number): string {
