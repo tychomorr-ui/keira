@@ -20,8 +20,9 @@ import { assembleMinimumContext, createMemoryObject, type ContextAssembly } from
 import { runBoundedReflection, type BoundedReflectionResult } from "./reflection-engine";
 import { ENV } from "./_core/env";
 import { formatMistEvidence, type MistEvidenceArtifact } from "./keira-prompt";
-import { gateResponse, type EvidenceGateResult } from "./evidence-gate";
+import { gateResponseWithSemanticEvaluation, type EvidenceGateResult } from "./evidence-gate";
 import { runXoriaPlan, type XoriaConvergence } from "./xoria-fabric";
+import { beginPerformanceSpan, getPerformanceSnapshot } from "./performance-fabric";
 
 export interface AdaptiveResponse {
   strategy: DialogueStrategy;
@@ -39,6 +40,7 @@ export interface AdaptiveResponse {
     xoria: Pick<XoriaConvergence, "requestId" | "correlationId" | "profile" | "outcome" | "unresolvedDimensions" | "contextVersion">;
     memoryContextIds: string[];
     reflection: Pick<BoundedReflectionResult, "decision" | "terminationReason" | "iterations" | "operations" | "records">;
+    performance: ReturnType<typeof getPerformanceSnapshot>;
     receipt: ReturnType<typeof routeLocalConversation> extends Promise<infer T> ? T extends { receipt: infer R } ? R : never : never;
     learningMemoryUpdates: {
       corePatterns?: string[];
@@ -63,6 +65,7 @@ export async function generateAdaptiveResponse(
   modelOptions?: { model?: string; fallbackModel?: string; mistEvidence?: MistEvidenceArtifact[] },
 ): Promise<AdaptiveResponse> {
   try {
+    const totalSpan = beginPerformanceSpan("TOTAL_REQUEST");
     const contextLedger = ((context as any).contextLedger ?? []) as Array<{ label: string; content: string; kind: string }>;
     const memoryAssembly = assembleMinimumContext({
       intent: userMessage,
@@ -89,6 +92,7 @@ export async function generateAdaptiveResponse(
     // Build comprehensive system prompt
     const systemPrompt = buildSystemPrompt(context, strategy, memoryAssembly);
 
+    const xoriaSpan = beginPerformanceSpan("XORIA");
     const xoria = await runXoriaPlan({
       request: userMessage,
       profile: userMessage.length > 160 || strategy.strategy === "forensic" ? "DEEP" : "FAST",
@@ -96,6 +100,7 @@ export async function generateAdaptiveResponse(
       authorizationScope: "conversation-only; no execution authority",
       timeoutMs: 250,
     });
+    xoriaSpan.finish(xoria.outcome !== "FAILED");
 
     // Build message history with context injection
     const messages = buildMessageHistory(userMessage, recentMessages, context, strategy, modelOptions?.mistEvidence ?? []);
@@ -134,7 +139,10 @@ export async function generateAdaptiveResponse(
       limits: { maxReflectionDepth: 2, maxRecursionDepth: 2, maxOperations: 8, maxTimeMs: 500, maxTokens: 4096 },
     });
     const generatedResponse = reflection.decision === "ACCEPT" ? reflection.finalOutput : localResult.value.content;
-    const evidenceGate = gateResponse(generatedResponse, modelOptions?.mistEvidence ?? []);
+    const semanticSpan = beginPerformanceSpan("SEMANTIC_EVALUATION");
+    const evidenceGate = await gateResponseWithSemanticEvaluation(generatedResponse, modelOptions?.mistEvidence ?? []);
+    semanticSpan.finish(true);
+    totalSpan.finish(true);
     const portalResponse = evidenceGate.response;
     const provider = localResult.value.provider === "local" ? "local" : "deterministic";
     const modelId = localResult.value.modelId;
@@ -169,6 +177,7 @@ export async function generateAdaptiveResponse(
           unresolvedDimensions: xoria.unresolvedDimensions,
           contextVersion: xoria.contextVersion,
         },
+        performance: getPerformanceSnapshot(),
         memoryContextIds: memoryAssembly.suppliedMemoryIds,
         reflection: { decision: reflection.decision, terminationReason: reflection.terminationReason, iterations: reflection.iterations, operations: reflection.operations, records: reflection.records },
         receipt: localResult.receipt,

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { evaluateEntailment, type EntailmentEvaluation, type LocalEntailmentEvaluator } from "./semantic-entailment";
 
 export type EvidenceGateStatus =
   | "SUPPORTED"
@@ -21,6 +22,7 @@ export type EvidenceGateClaim = {
   status: EvidenceGateStatus;
   validationMethod: "CID_MEMBERSHIP_HASH_AND_LEXICAL_PASSAGE_CHECK" | "CID_MEMBERSHIP_AND_LEXICAL_PASSAGE_CHECK" | "NO_RETRIEVED_EVIDENCE";
   reason: string;
+  semantic?: EntailmentEvaluation;
 };
 
 export type EvidenceGateResult = {
@@ -164,4 +166,31 @@ export function validateEvidenceGate(response: string, artifacts: EvidenceGateAr
 
 export function gateResponse(response: string, artifacts: EvidenceGateArtifact[]): EvidenceGateResult {
   return validateEvidenceGate(response, artifacts);
+}
+
+export async function gateResponseWithSemanticEvaluation(
+  response: string,
+  artifacts: EvidenceGateArtifact[],
+  evaluator?: LocalEntailmentEvaluator,
+): Promise<EvidenceGateResult> {
+  const base = validateEvidenceGate(response, artifacts);
+  const byCid = new Map(artifacts.map((artifact) => [normalize(artifact.cid), artifact]));
+  for (const claim of base.claims) {
+    const passages = claim.citedCids.map((cid) => byCid.get(normalize(cid))).filter((artifact): artifact is EvidenceGateArtifact => Boolean(artifact)).map((artifact) => ({ id: artifact.cid, text: artifact.snippet }));
+    claim.semantic = await evaluateEntailment(claim.claimText, passages, evaluator);
+    if (claim.semantic.classification === "ENTAILED") claim.status = "SUPPORTED";
+    else if (claim.semantic.classification === "PARTIALLY_ENTAILED") claim.status = "PARTIALLY_SUPPORTED";
+    else if (claim.semantic.classification === "CONTRADICTED") claim.status = "CONTRADICTED";
+    else if (claim.semantic.classification === "UNVERIFIED" || claim.semantic.classification === "AMBIGUOUS") claim.status = "UNVERIFIED";
+    else if (claim.semantic.classification === "INSUFFICIENT_EVIDENCE" || claim.semantic.classification === "IRRELEVANT_EVIDENCE") claim.status = "UNSUPPORTED";
+  }
+  const supportedCount = base.claims.filter((claim) => claim.status === "SUPPORTED").length;
+  const unresolvedCount = base.claims.filter((claim) => claim.status !== "SUPPORTED").length;
+  const status: EvidenceGateStatus = !base.corpusMatch
+    ? "NO_CORPUS_MATCH"
+    : unresolvedCount === 0 ? "SUPPORTED" : supportedCount > 0 ? "PARTIALLY_SUPPORTED" : "UNSUPPORTED";
+  const notice = !base.corpusMatch
+    ? "\n\nEvidence Gate: NO_CORPUS_MATCH. No retrieved corpus evidence was available for semantic evaluation."
+    : `\n\nEvidence Gate: ${status}. ${unresolvedCount} factual-looking proposition(s) remain unresolved after integrity and semantic evaluation.`;
+  return { ...base, response: `${response.trim()}${notice}`, claims: base.claims, status, supportedCount, unresolvedCount };
 }
