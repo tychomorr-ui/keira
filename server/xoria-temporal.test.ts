@@ -32,6 +32,17 @@ describe("XORIA bounded execution fabric", () => {
     expect(result.unresolvedDimensions).toContain("MICRO");
     expect(result.branches.find((branch) => branch.dimension === "MICRO")?.status).toBe("FAILED");
   });
+
+  it("marks a branch that exceeds the bounded deadline as timed out", async () => {
+    const result = await runXoriaPlan({
+      request: "bounded operation",
+      profile: "FAST",
+      timeoutMs: 5,
+      handler: async () => { await new Promise((resolve) => setTimeout(resolve, 25)); return "late"; },
+    });
+    expect(result.outcome).toBe("FAILED");
+    expect(result.branches.every((branch) => branch.status === "TIMED_OUT")).toBe(true);
+  });
 });
 
 describe("Temporal Truth", () => {

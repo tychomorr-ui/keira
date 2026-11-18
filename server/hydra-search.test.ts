@@ -37,4 +37,18 @@ describe("Hydra retrieval", () => {
     const second = await runHydraSearch(rows, "capability authority", { limit: 3 });
     expect(second).toEqual(first);
   });
+
+  it("filters superseded and expired evidence for current-only retrieval while preserving temporal status", async () => {
+    const temporalRows = [
+      { ...rows[0], temporal: { validUntil: "2025-12-31T00:00:00.000Z" } },
+      { ...rows[1], temporal: { validFrom: "2025-01-01T00:00:00.000Z", validUntil: "2027-01-01T00:00:00.000Z" } },
+      { ...rows[2], temporal: { supersededBy: "cid-newer" } },
+    ];
+    const result = await runHydraSearch(temporalRows, "local runtime", { currentOnly: true, asOf: new Date("2026-01-01T00:00:00.000Z"), limit: 3 });
+    expect(result.temporal["cid-policy"]?.status).toBe("EXPIRED");
+    expect(result.temporal["cid-noise"]?.status).toBe("SUPERSEDED");
+    expect(result.fusion.map((entry) => entry.id)).not.toContain("cid-policy");
+    expect(result.fusion.map((entry) => entry.id)).not.toContain("cid-noise");
+    expect(result.fusion.map((entry) => entry.id)).toContain("cid-runtime");
+  });
 });

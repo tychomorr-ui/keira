@@ -1,5 +1,6 @@
 import { generateEmbedding } from "./local-embedding-provider";
 import { cosineSimilarity } from "./corpus-similarity";
+import { assessTemporalEvidence, type TemporalEvidence, type TemporalStatus } from "./temporal-truth";
 
 export type HydraCorpusRow = {
   artifactCid: string;
@@ -7,6 +8,7 @@ export type HydraCorpusRow = {
   content: string;
   vectorJson: string;
   contentSha256?: string | null;
+  temporal?: TemporalEvidence;
 };
 
 export type HydraHead = "dense" | "keyword" | "rewrite" | "metadata";
@@ -22,6 +24,7 @@ export type HydraSearchResult = {
   heads: Record<HydraHead, HydraRank[]>;
   fusion: Array<{ id: string; score: number; ranks: Partial<Record<HydraHead, number>> }>;
   rewriteQueries: string[];
+  temporal: Record<string, { status: TemporalStatus; basis: string[] }>;
 };
 
 const RRF_K = 60;
@@ -63,8 +66,18 @@ export function buildHydraRewriteQueries(query: string): string[] {
 export async function runHydraSearch(
   rows: HydraCorpusRow[],
   query: string,
-  options: { limit?: number; denseLimit?: number } = {},
+  options: { limit?: number; denseLimit?: number; asOf?: Date; currentOnly?: boolean; allowHistorical?: boolean } = {},
 ): Promise<HydraSearchResult> {
+  const temporal = Object.fromEntries(rows.map((row) => {
+    const assessment = assessTemporalEvidence(row.temporal ?? {}, options.asOf);
+    return [row.artifactCid, { status: assessment.status, basis: assessment.basis }];
+  }));
+  const selectedRows = rows.filter((row) => {
+    const status = temporal[row.artifactCid]?.status;
+    if (!options.currentOnly) return true;
+    return status === "CURRENT" || (options.allowHistorical && status === "HISTORICAL");
+  });
+  rows = selectedRows;
   const limit = Math.max(1, Math.min(30, Math.floor(options.limit ?? 30)));
   const denseLimit = Math.max(limit, Math.min(rows.length, Math.floor(options.denseLimit ?? 60)));
   const queryTokens = tokens(query);
@@ -125,7 +138,7 @@ export async function runHydraSearch(
     .slice(0, limit)
     .filter((entry) => rowById.has(entry.id));
 
-  return { heads, fusion, rewriteQueries };
+  return { heads, fusion, rewriteQueries, temporal };
 }
 
 export const HYDRA_RRF_CONSTANT = RRF_K;

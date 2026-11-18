@@ -76,13 +76,18 @@ async function runBranch(dimension: XoriaDimension, context: XoriaContext, handl
   const deadline = deadlineError(context);
   if (deadline) return { branchId, dimension, status: "TIMED_OUT", durationMs: Date.now() - started, contextVersion: context.contextVersion, payload: "", evidenceRefs: [], uncertainties: [deadline], error: deadline };
   try {
-    const payload = handler ? await handler(dimension, context) : defaultBranch(dimension, context).payload;
+    const remainingMs = Math.max(1, context.deadlineAt - Date.now());
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error("XORIA_DEADLINE_EXCEEDED")), remainingMs));
+    const payload = handler
+      ? await Promise.race([handler(dimension, context), timeout])
+      : defaultBranch(dimension, context).payload;
     const timedOut = deadlineError(context);
     if (timedOut) return { branchId, dimension, status: "TIMED_OUT", durationMs: Date.now() - started, contextVersion: context.contextVersion, payload: "", evidenceRefs: [...context.evidenceRefs], uncertainties: [timedOut], error: timedOut };
     return { branchId, dimension, status: "COMPLETED", durationMs: Date.now() - started, contextVersion: context.contextVersion, payload, evidenceRefs: [...context.evidenceRefs], uncertainties: defaultBranch(dimension, context).uncertainties };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { branchId, dimension, status: "FAILED", durationMs: Date.now() - started, contextVersion: context.contextVersion, payload: "", evidenceRefs: [], uncertainties: ["Branch failed; result was not promoted."], error: message };
+    const timedOut = message === "XORIA_DEADLINE_EXCEEDED";
+    return { branchId, dimension, status: timedOut ? "TIMED_OUT" : "FAILED", durationMs: Date.now() - started, contextVersion: context.contextVersion, payload: "", evidenceRefs: [], uncertainties: [timedOut ? message : "Branch failed; result was not promoted."], error: message };
   }
 }
 
