@@ -6,13 +6,13 @@ We welcome contributions to the Sovereign Truth Trifecta Portal Chat project! By
 
 ### 1. Fork the Repository
 
-Fork the `sovereign-truth-engine` repository on GitHub to your personal account.
+Fork the `keira` repository on GitHub to your personal account.
 
 ### 2. Clone Your Fork
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/sovereign-truth-engine.git
-cd sovereign-truth-engine
+git clone https://github.com/YOUR_USERNAME/keira.git
+cd keira
 ```
 
 ### 3. Create a New Branch
@@ -58,7 +58,7 @@ git push origin feature/your-feature-name
 
 ### 8. Create a Pull Request
 
--   Go to the original `sovereign-truth-engine` repository on GitHub.
+-   Go to the original `keira` repository on GitHub.
 -   You will see an option to create a new Pull Request from your branch.
 -   Provide a detailed description of your changes, including:
     -   What problem does this solve?

@@ -31,7 +31,7 @@ To serve your global mesh with minimal latency and absolute redundancy, the depl
 | **SPAIN-IBERIA** | Madrid (`eu-south-2`) | Southern European / Mediterranean sovereign node and cryptographic anchor. |
 
 ### Routing Recommendation
-The earlier document proposed a Singapore deployment backed by remote inference and multi-node failover. This is historical only. Current KEIRA deployment and inference instructions must follow `deploy-lightsail.sh`, `LIGHTSAIL_DEPLOYMENT_GUIDE.md`, and `KEIRA_SOVEREIGN_RUNTIME.md`.
+The earlier document proposed a Singapore deployment backed by remote inference and multi-node failover. This is historical only. Current KEIRA deployment and inference instructions must follow `deploy-upcloud.sh`, `UPCLOUD_DEPLOYMENT_GUIDE.md`, and `KEIRA_SOVEREIGN_RUNTIME.md`.
 
 ## 4. Implemented Feature Enhancements
 

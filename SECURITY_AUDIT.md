@@ -60,7 +60,7 @@ Do not commit `.env` files, database passwords, local model API keys, IAM keys, 
 pnpm check
 pnpm test
 pnpm build
-bash -n deploy-lightsail.sh
+bash -n deploy-upcloud.sh
 ```
 
 After the service starts, verify the local process before routing live traffic:
@@ -71,4 +71,4 @@ pm2 status
 pm2 logs keira-intelligence --lines 50
 ```
 
-The detailed self-hosting procedure is maintained in [LIGHTSAIL_DEPLOYMENT_GUIDE.md](./LIGHTSAIL_DEPLOYMENT_GUIDE.md). Its inference configuration should follow `KEIRA_SOVEREIGN_RUNTIME.md`, not the historical Bedrock material.
+The detailed self-hosting procedure is maintained in [UPCLOUD_DEPLOYMENT_GUIDE.md](./UPCLOUD_DEPLOYMENT_GUIDE.md). Its inference configuration should follow `KEIRA_SOVEREIGN_RUNTIME.md`, not the historical Bedrock material.

@@ -40,7 +40,7 @@
 | `server/_core/vite.ts` | Dev/prod asset serving | Deployment boundary | Preserve | High |
 | `package.json`, `pnpm-lock.yaml` | Build/dependency contract | Dependency audit required before additions | Modify only after compatibility proof | High |
 | `vite.config.ts`, `tsconfig.json`, `drizzle.config.ts` | Tooling/build/schema config | Runtime compatibility | Preserve unless required | Medium |
-| `deploy-lightsail.sh`, `LIGHTSAIL_DEPLOYMENT_GUIDE.md` | Historical Lightsail deployment | Current project is hosted Manus; not active deployment target | Do not use as implementation basis | Medium |
+| `deploy-upcloud.sh`, `UPCLOUD_DEPLOYMENT_GUIDE.md` | UpCloud deployment | Operator runbook for KEIRA Intelligence at keira.nexinus.net; runtime status requires host verification | Review before execution | Medium |
 | `DEPLOYMENT.md` | Manus hosted deployment notes | Current deployment reference | Update only after deployment changes | Medium |
 | `KEIRA_SOVEREIGN_RUNTIME.md` | Existing runtime documentation | Must be updated only after verified implementation | Preserve until Phase 1+ | Low |
 

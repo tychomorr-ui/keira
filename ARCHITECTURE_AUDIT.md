@@ -1,9 +1,9 @@
 # KEIRA Architecture Audit
 
 **Audit phase:** Step 0 inspection with Phase 2 corpus-foundation addendum
-**Repository:** `sovereign-truth-engine-app`  
-**Commit audited:** `332f289` — temporary beta-open mode  
-**Audit date:** 2026-10-18  
+**Repository:** `keira` (KEIRA Intelligence)
+**Commit audited:** `332f289` — temporary beta-open mode
+**Audit date:** 2026-10-18
 **Scope:** Existing implementation versus the attached KEIRA Master Build Directive and execution addendums.
 
 ## Executive conclusion

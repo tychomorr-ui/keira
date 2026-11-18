@@ -111,7 +111,7 @@ The dependency direction is intentionally one-way: application orchestration may
 
 ## F. Test strategy
 
-Every new subsystem requires unit tests for nominal, unavailable, denied, degraded, and recovery states. Integration tests must verify authenticated ownership and that no provider is silently invoked. Property-style tests should cover bounded recursion and receipt invariants. Runtime probes must be run against each supported local backend independently. Release gates remain `pnpm check`, `pnpm test`, `pnpm build`, `bash -n deploy-lightsail.sh`, source audit, and diff audit.
+Every new subsystem requires unit tests for nominal, unavailable, denied, degraded, and recovery states. Integration tests must verify authenticated ownership and that no provider is silently invoked. Property-style tests should cover bounded recursion and receipt invariants. Runtime probes must be run against each supported local backend independently. Release gates remain `pnpm check`, `pnpm test`, `pnpm build`, `bash -n deploy-upcloud.sh`, source audit, and diff audit.
 
 ## G. Proposed data schemas
 

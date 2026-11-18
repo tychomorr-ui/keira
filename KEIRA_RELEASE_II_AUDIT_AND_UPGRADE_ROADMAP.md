@@ -6,7 +6,7 @@
 
 > **Superseded inference architecture.** Bedrock references in this historical roadmap describe the former implementation. The active provider-independent design is documented in [`KEIRA_SOVEREIGN_RUNTIME.md`](./KEIRA_SOVEREIGN_RUNTIME.md); external AI providers are disabled.
 
-> **Decision:** KEIRA’s active product behavior is coherent and materially stronger after Release II. The supply-chain remediation was completed and a fresh production audit now returns **“No known vulnerabilities found.”** The source release now includes exact loopback binding, Nginx authentication rate limits, a browser content-security policy, and HSTS guidance. Public activation remains conditional only on operator-controlled AWS tasks: applying the reviewed configuration on Lightsail, enabling TLS after DNS, and validating the firewall.
+> **Decision:** KEIRA’s active product behavior is coherent and materially stronger after Release II. The supply-chain remediation was completed and a fresh production audit now returns **“No known vulnerabilities found.”** The source release now includes exact loopback binding, Nginx authentication rate limits, a browser content-security policy, and HSTS guidance. Public activation remains conditional only on operator-controlled operator-controlled UpCloud tasks: applying the reviewed configuration on UpCloud, enabling TLS after DNS, and validating the firewall.
 
 ## Executive assessment
 
@@ -23,7 +23,7 @@ The active runtime is narrow by design. Only `auth.*` and `portal.chat.*` are mo
 | Inference integrity | Deterministic lane is always active; local model is optional; external providers are disabled | **Pass** | Keep research and realtime voice marked unavailable until configured. |
 | Stored context | Active ledger is inspectable, pausable, deleteable; recall requires explicit operator promotion | **Pass** | Add retention/export/delete policy before multi-user public launch. |
 | Browser rendering | Markdown is rendered with `streamdown`; no direct application use of `dangerouslySetInnerHTML` was found outside a generic chart component | **Conditional** | Update the transitive Markdown/diagram sanitizer chain before public launch. |
-| Web edge | `X-Content-Type-Options`, frame denial, referrer policy, permissions policy, COOP, and CSP are set; the deployment helper adds Nginx authentication rate limits and HSTS guidance | **Pass in source** | Validate the rendered Nginx/TLS configuration and Lightsail firewall during deployment. |
+| Web edge | `X-Content-Type-Options`, frame denial, referrer policy, permissions policy, COOP, and CSP are set; the deployment helper adds Nginx authentication rate limits and HSTS guidance | **Pass in source** | Validate the rendered Nginx/TLS configuration and UpCloud firewall during deployment. |
 | Dependency posture | Initial audit reported **1 critical, 21 high, 49 moderate, and 10 low** findings. After controlled updates/removals, a fresh `pnpm audit --prod --audit-level=moderate` returned **“No known vulnerabilities found.”** | **Pass** | Keep the production audit in the release gate. |
 
 ## Release II implementation audit
@@ -67,7 +67,7 @@ The application correctly uses a timing-safe comparison for the owner token, scr
 
 No application-level login throttling is present. Before opening public registration or exposing the owner bootstrap to more than the operator, enforce an Nginx `limit_req` policy on `/api/trpc/auth.login`, `/api/trpc/auth.register`, and `/api/trpc/auth.ownerBootstrap`, and add upstream abuse monitoring. Rate limiting is a standard API abuse-control recommendation.[3]
 
-The Express server sets useful baseline headers, but a production TLS configuration should additionally set a Content Security Policy and HTTP Strict Transport Security after the certificate is active. Keep Nginx as the only public ingress, bind the application only to loopback, and do not expose the Node port in the Lightsail firewall. For AWS credentials and S3 access, prefer an instance role or narrowly scoped access keys; AWS recommends granting only permissions required for the task.[4]
+The Express server sets useful baseline headers, but a production TLS configuration should additionally set a Content Security Policy and HTTP Strict Transport Security after the certificate is active. Keep Nginx as the only public ingress, bind the application only to loopback, and do not expose the Node port in the UpCloud firewall. For AWS credentials and S3 access, prefer an instance role or narrowly scoped access keys; AWS recommends granting only permissions required for the task.[4]
 
 ### Deployment configuration drift — Remediated
 
@@ -96,10 +96,10 @@ The Tier 3 evaluated quality system is the route to meaningful competitive progr
 ## Verification and remediation sequence
 
 1. Keep `pnpm audit --prod --audit-level=moderate` in the release gate; the current result is clean.
-2. Run `pnpm test`, `pnpm check`, `pnpm build`, and `bash -n deploy-lightsail.sh` after every dependency or runtime change.
-3. Apply the included production edge controls on Lightsail, then validate Nginx syntax, TLS/HSTS after Certbot, and firewall rules for only ports 80/443.
+2. Run `pnpm test`, `pnpm check`, `pnpm build`, and `bash -n deploy-upcloud.sh` after every dependency or runtime change.
+3. Apply the included production edge controls on UpCloud, then validate Nginx syntax, TLS/HSTS after Certbot, and firewall rules for only ports 80/443.
 4. Apply only reviewed, committed migrations on production RDS after the release passes locally.
-5. Update the Lightsail checkout to the audited commit, configure `.env` directly on the instance, and verify health locally before DNS or TLS activation.
+5. Update the UpCloud checkout to the audited commit, configure `.env` directly on the instance, and verify health locally before DNS or TLS activation.
 
 ## References
 

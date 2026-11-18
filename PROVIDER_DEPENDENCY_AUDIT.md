@@ -28,6 +28,6 @@ The verified release gate demonstrates:
 - `pnpm check` passes.
 - Full Vitest suite passes: **112 passed, 1 expected skip**.
 - Production build passes.
-- `bash -n deploy-lightsail.sh` passes.
+- `bash -n deploy-upcloud.sh` passes.
 - No active source or deployment file references Bedrock configuration.
 - Deterministic operations return receipts with `external_service_used: false` and `data_left_local_node: false`.

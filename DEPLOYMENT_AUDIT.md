@@ -98,7 +98,7 @@ A browser should not be configured to call `10.9.0.1:11434` directly unless the 
 
 ## Reverse proxy and HTTPS
 
-The application has `app.set("trust proxy", 1)` and security headers. The current repository contains historical Lightsail/Nginx deployment material, but the active target is hosted Manus. No live Nginx/Caddy/Traefik configuration is part of this project, and no reverse-proxy-to-Ollama path has been verified here.
+The application has `app.set("trust proxy", 1)` and security headers. The current repository contains the UpCloud/Nginx operator runbook, but repository contents alone do not prove that `87.58.152.89` or `keira.nexinus.net` is live. No live reverse-proxy-to-Ollama path is claimed here.
 
 The application itself does not currently include an explicit CORS allowlist middleware. Same-origin tRPC operation is the normal hosted path. The directive's required allowlist for `https://keira.nexinus.net` and approved localhost origins is therefore **not implemented/verified**. This should be designed before introducing cross-origin clients or a separate scraper origin.
 
@@ -111,7 +111,7 @@ Drizzle migrations are part of the repository and current schema checks have pas
 - Production build succeeds.
 - The frontend bundle emits a Vite warning for a chunk larger than 500 kB; this is a performance warning, not a deployment failure.
 - No Dockerfile or active container orchestration manifest was found.
-- Historical `deploy-lightsail.sh` is not the current hosted deployment mechanism.
+- Historical provider deployment script is not the current hosted deployment mechanism.
 - The active server entrypoint is suitable for the hosted WebDev build contract.
 - The pinned MiniLM model files and ONNX Runtime WASM files are lifecycle-managed assets, not repository files in `client/public`; the server proxy streams them same-origin with range and content-type preservation.
 
@@ -134,7 +134,7 @@ Drizzle migrations are part of the repository and current schema checks have pas
 | `10.9.0.1:11434` reachability from Manus | Not applicable | Test from the Singapore host, not the hosted sandbox |
 | `10.9.0.1:11434` reachability from Singapore | Pending operator deployment | Verify WireGuard route, `/v1/models`, and `/v1/chat/completions` |
 | CORS allowlist | Not implemented/verified | Same-origin only is the safe current assumption |
-| Nginx/Caddy/TLS proxy chain | Not verified in current target | Historical Lightsail docs are not evidence |
+| Nginx/Caddy/TLS proxy chain | Not verified in current target | Historical deployment docs are not evidence |
 | Corpus upload/corpus persistence | Browser-local IndexedDB foundation implemented and API-contract tested | No upload UI, PDF parser, or live browser acceptance yet |
 | MIST/Phoenix acceptance | Not implemented | Directive Phase 3+ required |
 

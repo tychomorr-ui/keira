@@ -1,4 +1,4 @@
-# KEIRA — Sovereign Intelligence Node
+# KEIRA Intelligence
 
 KEIRA is the sovereign ecosystem's dedicated conversational intelligence node. It provides direct, long-context dialogue, adaptive persona manifestation, esoteric keyword awareness, secure first-party sessions, optional browser voice interaction, encrypted transcript export, and a self-hosted local inference path with a deterministic offline fallback.
 
@@ -90,9 +90,13 @@ pnpm test
 pnpm build
 ```
 
-## Self-Hosted Deployment
+## Canonical self-hosted deployment
 
-The dedicated repository is [`tychomorr-ui/sovereign-truth-engine-app`](https://github.com/tychomorr-ui/sovereign-truth-engine-app). The Ubuntu/Nginx sequence, required environment variables, PM2 process configuration, reverse proxy, and TLS setup are documented in [LIGHTSAIL_DEPLOYMENT_GUIDE.md](./LIGHTSAIL_DEPLOYMENT_GUIDE.md). The source and endpoint audit is documented in [SECURITY_AUDIT.md](./SECURITY_AUDIT.md).
+This repository is the canonical KEIRA Intelligence application source. The current operator-declared production host is an UpCloud Ubuntu instance at `87.58.152.89`, served as `https://keira.nexinus.net`. The application remains bound to loopback and is exposed only through an operator-managed HTTPS reverse proxy.
+
+The deployment procedure is documented in [UPCLOUD_DEPLOYMENT_GUIDE.md](./UPCLOUD_DEPLOYMENT_GUIDE.md). It is an operator runbook, not proof that the host is currently deployed or healthy. DNS, TLS, process state, database state, and model reachability must be verified on the host before being reported as live.
+
+The product identity is **KEIRA Intelligence**. Older repository names, preview URLs, and provider-specific deployment assumptions are not canonical KEIRA deployment references.
 
 Set `KEIRA_LLM_ENDPOINT` and `KEIRA_LLM_MODEL` to enable a local model.
 `KEIRA_LLM_FALLBACK_MODEL` is optional; Fast Mode selects it directly, and the
