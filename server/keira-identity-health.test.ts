@@ -1,6 +1,13 @@
 import express from "express";
 import { createServer } from "node:http";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+const previousIdentityRootSecret = vi.hoisted(() => {
+  const previous = process.env.KEIRA_IDENTITY_ROOT_SECRET;
+  process.env.KEIRA_IDENTITY_ROOT_SECRET = "keira-test-identity-root-secret-32-bytes";
+  return previous;
+});
+
 import { keiraIdentityRootSecretHealthHandler } from "./keira-identity-health";
 
 let server: ReturnType<typeof createServer>;
@@ -19,6 +26,8 @@ describe("KEIRA identity root-secret health endpoint", () => {
 
   afterAll(async () => {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    if (previousIdentityRootSecret === undefined) delete process.env.KEIRA_IDENTITY_ROOT_SECRET;
+    else process.env.KEIRA_IDENTITY_ROOT_SECRET = previousIdentityRootSecret;
   });
 
   it("reports secure identity-key encryption readiness without disclosing the supplied secret", async () => {

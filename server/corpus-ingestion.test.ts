@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("./db", () => ({
+  getDb: vi.fn(async () => null),
+}));
+
 vi.mock("./local-embedding-provider", () => ({
   generateEmbedding: vi.fn(async (text: string) => Array.from({ length: 768 }, (_, index) => (text.length + (index % 7)) / 1000)),
 }));
