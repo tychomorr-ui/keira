@@ -49,6 +49,7 @@ export function truncateToSentences(value: string, maximum: number): string {
 export type MistEvidenceArtifact = {
   cid: string;
   snippet: string;
+  contentSha256?: string | null;
 };
 
 export function formatMistEvidence(artifacts: MistEvidenceArtifact[]): string {

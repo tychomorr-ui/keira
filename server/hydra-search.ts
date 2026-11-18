@@ -6,6 +6,7 @@ export type HydraCorpusRow = {
   filename: string;
   content: string;
   vectorJson: string;
+  contentSha256?: string | null;
 };
 
 export type HydraHead = "dense" | "keyword" | "rewrite" | "metadata";

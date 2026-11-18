@@ -141,7 +141,7 @@ export async function streamPortalMessage(
   }
   if (!mistEvidence.length && routingDecision.requiresRetrieval) {
     mistResult = await runMist(message, { userId, maxArtifacts: 30 });
-    mistEvidence = mistResult.artifacts.map((artifact) => ({ cid: artifact.cid, snippet: artifact.content }));
+    mistEvidence = mistResult.artifacts.map((artifact) => ({ cid: artifact.cid, snippet: artifact.content, contentSha256: artifact.contentSha256 }));
     if (mistResult.artifacts.length > 0) {
       void persistMistTrajectory(userId, toPersistableMistResult(mistResult)).catch((error) => {
         console.warn("[MIST] async trajectory persistence failed", error instanceof Error ? error.message : String(error));

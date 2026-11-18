@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { runHydraSearch, HYDRA_RRF_CONSTANT, type HydraCorpusRow } from "./hydra-search";
 import { commitMistResult } from "./mist-commitment";
 
-type MistArtifact = { cid: string; content: string; source: string; layer: number; score: number };
+type MistArtifact = { cid: string; content: string; source: string; layer: number; score: number; contentSha256?: string | null };
 export type MistResult = {
   query: string;
   artifacts: MistArtifact[];
@@ -27,7 +27,7 @@ export async function runMist(query: string, options: { maxArtifacts?: number; u
   if (!query.trim() || !options.userId) return empty;
   const db = await getDb();
   if (!db) return empty;
-  const rows = await db.select({ artifactCid: keiraCorpusVectors.artifactCid, filename: keiraCorpusVectors.filename, content: keiraCorpusVectors.content, vectorJson: keiraCorpusVectors.vectorJson })
+  const rows = await db.select({ artifactCid: keiraCorpusVectors.artifactCid, filename: keiraCorpusVectors.filename, content: keiraCorpusVectors.content, vectorJson: keiraCorpusVectors.vectorJson, contentSha256: keiraCorpusVectors.contentSha256 })
     .from(keiraCorpusVectors)
     .where(eq(keiraCorpusVectors.userId, options.userId)) as HydraCorpusRow[];
   if (!rows.length) return empty;
@@ -47,7 +47,7 @@ export async function runMist(query: string, options: { maxArtifacts?: number; u
   const artifacts = hydra.fusion.map((entry) => {
     const row = rowById.get(entry.id)!;
     const layers = Object.entries(memberships).filter(([, ids]) => ids.includes(entry.id)).map(([layer]) => Number(layer));
-    return { cid: entry.id, content: row.content, source: row.filename, layer: layers[0] ?? 7, score: entry.score };
+    return { cid: entry.id, content: row.content, source: row.filename, layer: layers[0] ?? 7, score: entry.score, contentSha256: row.contentSha256 };
   });
   const resultWithoutRoot = {
     query,

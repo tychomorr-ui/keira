@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export type EvidenceGateStatus =
   | "SUPPORTED"
   | "PARTIALLY_SUPPORTED"
@@ -9,6 +11,7 @@ export type EvidenceGateStatus =
 export type EvidenceGateArtifact = {
   cid: string;
   snippet: string;
+  contentSha256?: string | null;
 };
 
 export type EvidenceGateClaim = {
@@ -16,7 +19,7 @@ export type EvidenceGateClaim = {
   claimText: string;
   citedCids: string[];
   status: EvidenceGateStatus;
-  validationMethod: "CID_MEMBERSHIP_AND_LEXICAL_PASSAGE_CHECK" | "NO_RETRIEVED_EVIDENCE";
+  validationMethod: "CID_MEMBERSHIP_HASH_AND_LEXICAL_PASSAGE_CHECK" | "CID_MEMBERSHIP_AND_LEXICAL_PASSAGE_CHECK" | "NO_RETRIEVED_EVIDENCE";
   reason: string;
 };
 
@@ -58,6 +61,15 @@ function overlapScore(claim: string, snippet: string): number {
   if (!claimTerms.length) return 0;
   const snippetTerms = new Set(terms(snippet));
   return claimTerms.filter((term) => snippetTerms.has(term)).length / claimTerms.length;
+}
+
+function hasNegation(value: string): boolean {
+  return /\b(?:not|never|no|without|cannot|can't|doesn't|isn't|aren't|didn't)\b/i.test(value);
+}
+
+function hashMatches(artifact: EvidenceGateArtifact): boolean {
+  if (!artifact.contentSha256) return true;
+  return createHash("sha256").update(artifact.snippet, "utf8").digest("hex") === artifact.contentSha256.toLowerCase();
 }
 
 function isNonClaimLine(claim: string): boolean {
@@ -107,17 +119,32 @@ export function validateEvidenceGate(response: string, artifacts: EvidenceGateAr
       continue;
     }
 
+    const integrityFailure = resolved.some((artifact) => !hashMatches(artifact));
+    const contradiction = validArtifacts.some((artifact) => {
+      if (resolved.includes(artifact) || overlapScore(claimText, artifact.snippet) < 0.35) return false;
+      return hasNegation(claimText) !== hasNegation(artifact.snippet);
+    });
     const bestOverlap = Math.max(...resolved.map((artifact) => overlapScore(claimText, artifact.snippet)));
-    const status: EvidenceGateStatus = bestOverlap >= 0.2 ? "SUPPORTED" : bestOverlap > 0 ? "PARTIALLY_SUPPORTED" : "UNSUPPORTED";
+    const status: EvidenceGateStatus = integrityFailure
+      ? "UNVERIFIED"
+      : contradiction
+        ? "CONTRADICTED"
+        : bestOverlap >= 0.2 ? "SUPPORTED" : bestOverlap > 0 ? "PARTIALLY_SUPPORTED" : "UNSUPPORTED";
     claims.push({
       claimId: `claim-${index + 1}`,
       claimText,
       citedCids: citations,
       status,
-      validationMethod: "CID_MEMBERSHIP_AND_LEXICAL_PASSAGE_CHECK",
-      reason: status === "SUPPORTED"
-        ? "Cited CID exists and shares substantive terms with the cited passage."
-        : "Cited CID exists, but lexical passage correspondence is insufficient to establish support.",
+      validationMethod: resolved.some((artifact) => artifact.contentSha256)
+        ? "CID_MEMBERSHIP_HASH_AND_LEXICAL_PASSAGE_CHECK"
+        : "CID_MEMBERSHIP_AND_LEXICAL_PASSAGE_CHECK",
+      reason: integrityFailure
+        ? "The cited passage does not match its stored SHA-256 content identity."
+        : contradiction
+          ? "A retrieved passage with overlapping terms has conflicting negation polarity."
+          : status === "SUPPORTED"
+            ? "Cited CID exists and shares substantive terms with the cited passage."
+            : "Cited CID exists, but lexical passage correspondence is insufficient to establish support.",
     });
   }
 

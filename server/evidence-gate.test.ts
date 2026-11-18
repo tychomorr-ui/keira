@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { validateEvidenceGate } from "./evidence-gate";
 
 const evidence = [
@@ -46,5 +47,26 @@ describe("Evidence Gate", () => {
     expect(result.status).toBe("PARTIALLY_SUPPORTED");
     expect(result.supportedCount).toBe(1);
     expect(result.unresolvedCount).toBe(1);
+  });
+
+  it("marks a modified passage as unverified when its stored hash no longer matches", () => {
+    const result = validateEvidenceGate(
+      "The local runtime uses deterministic retrieval [CID: cid-runtime].",
+      [{ cid: "cid-runtime", snippet: "The local runtime uses deterministic retrieval.", contentSha256: "0".repeat(64) }],
+    );
+    expect(result.claims[0]?.status).toBe("UNVERIFIED");
+    expect(result.claims[0]?.reason).toContain("SHA-256");
+  });
+
+  it("preserves a direct polarity conflict as contradicted", () => {
+    const positive = "The runtime uses deterministic retrieval.";
+    const result = validateEvidenceGate(
+      "The runtime uses deterministic retrieval [CID: cid-positive].",
+      [
+        { cid: "cid-positive", snippet: positive, contentSha256: createHash("sha256").update(positive).digest("hex") },
+        { cid: "cid-negative", snippet: "The runtime does not use deterministic retrieval." },
+      ],
+    );
+    expect(result.claims[0]?.status).toBe("CONTRADICTED");
   });
 });
