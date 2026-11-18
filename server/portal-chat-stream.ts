@@ -179,9 +179,12 @@ export async function streamPortalMessage(
     strategySelection,
     recentMessages,
     userRecord[0].modelTemperature,
-    onToken,
+    () => undefined,
     { model: selectedModel, fallbackModel: ENV.localLlmFallbackModel || undefined, mistEvidence },
   );
+
+  // Evidence validation runs after generation; release only the validated response.
+  onToken(adaptiveResponse.response);
 
   await writeCachedResponse({
     cacheKey,

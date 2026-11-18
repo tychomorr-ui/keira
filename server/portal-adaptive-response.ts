@@ -20,6 +20,7 @@ import { assembleMinimumContext, createMemoryObject, type ContextAssembly } from
 import { runBoundedReflection, type BoundedReflectionResult } from "./reflection-engine";
 import { ENV } from "./_core/env";
 import { formatMistEvidence, type MistEvidenceArtifact } from "./keira-prompt";
+import { gateResponse, type EvidenceGateResult } from "./evidence-gate";
 
 export interface AdaptiveResponse {
   strategy: DialogueStrategy;
@@ -33,6 +34,7 @@ export interface AdaptiveResponse {
     responseObjective: ResponseObjective;
     carryoverMessageCount: number;
     qualityContract: string;
+    evidenceGate: Pick<EvidenceGateResult, "status" | "supportedCount" | "unresolvedCount" | "corpusMatch" | "claims">;
     memoryContextIds: string[];
     reflection: Pick<BoundedReflectionResult, "decision" | "terminationReason" | "iterations" | "operations" | "records">;
     receipt: ReturnType<typeof routeLocalConversation> extends Promise<infer T> ? T extends { receipt: infer R } ? R : never : never;
@@ -121,7 +123,9 @@ export async function generateAdaptiveResponse(
       level: 2,
       limits: { maxReflectionDepth: 2, maxRecursionDepth: 2, maxOperations: 8, maxTimeMs: 500, maxTokens: 4096 },
     });
-    const portalResponse = reflection.decision === "ACCEPT" ? reflection.finalOutput : localResult.value.content;
+    const generatedResponse = reflection.decision === "ACCEPT" ? reflection.finalOutput : localResult.value.content;
+    const evidenceGate = gateResponse(generatedResponse, modelOptions?.mistEvidence ?? []);
+    const portalResponse = evidenceGate.response;
     const provider = localResult.value.provider === "local" ? "local" : "deterministic";
     const modelId = localResult.value.modelId;
 
@@ -140,6 +144,13 @@ export async function generateAdaptiveResponse(
         responseObjective: resolveResponseObjective((context as any).profile?.responseObjective),
         carryoverMessageCount: recentMessages.length,
         qualityContract: "Answer quality contract active: answer scope, uncertainty boundaries, and any source limitations are explicit.",
+        evidenceGate: {
+          status: evidenceGate.status,
+          supportedCount: evidenceGate.supportedCount,
+          unresolvedCount: evidenceGate.unresolvedCount,
+          corpusMatch: evidenceGate.corpusMatch,
+          claims: evidenceGate.claims,
+        },
         memoryContextIds: memoryAssembly.suppliedMemoryIds,
         reflection: { decision: reflection.decision, terminationReason: reflection.terminationReason, iterations: reflection.iterations, operations: reflection.operations, records: reflection.records },
         receipt: localResult.receipt,
