@@ -23,6 +23,7 @@ import { formatMistEvidence, type MistEvidenceArtifact } from "./keira-prompt";
 import { gateResponseWithSemanticEvaluation, type EvidenceGateResult } from "./evidence-gate";
 import { runXoriaPlan, type XoriaConvergence } from "./xoria-fabric";
 import { beginPerformanceSpan, getPerformanceSnapshot } from "./performance-fabric";
+import { convergeOmni, type OmniConvergence } from "./omni-convergence";
 
 export interface AdaptiveResponse {
   strategy: DialogueStrategy;
@@ -41,6 +42,7 @@ export interface AdaptiveResponse {
     memoryContextIds: string[];
     reflection: Pick<BoundedReflectionResult, "decision" | "terminationReason" | "iterations" | "operations" | "records">;
     performance: ReturnType<typeof getPerformanceSnapshot>;
+    omni: OmniConvergence;
     receipt: ReturnType<typeof routeLocalConversation> extends Promise<infer T> ? T extends { receipt: infer R } ? R : never : never;
     learningMemoryUpdates: {
       corePatterns?: string[];
@@ -142,6 +144,15 @@ export async function generateAdaptiveResponse(
     const semanticSpan = beginPerformanceSpan("SEMANTIC_EVALUATION");
     const evidenceGate = await gateResponseWithSemanticEvaluation(generatedResponse, modelOptions?.mistEvidence ?? []);
     semanticSpan.finish(true);
+    const omni = convergeOmni({
+      requestId: xoria.requestId,
+      correlationId: xoria.correlationId,
+      contextVersion: xoria.contextVersion,
+      branches: xoria.branches.map((branch) => ({ id: branch.dimension, status: branch.status === "COMPLETED" ? "COMPLETED" : branch.status === "TIMED_OUT" ? "TIMED_OUT" : "FAILED", uncertainty: branch.uncertainties })),
+      claims: evidenceGate.claims.map((claim) => ({ id: claim.claimId, semantic: claim.semantic?.classification ?? (claim.status === "SUPPORTED" ? "ENTAILED" : "UNVERIFIED"), integrity: "UNVERIFIED", temporal: "TEMPORALLY_UNKNOWN" })),
+      ssoState: "EXECUTED",
+      authorization: "AUTHORIZED",
+    });
     totalSpan.finish(true);
     const portalResponse = evidenceGate.response;
     const provider = localResult.value.provider === "local" ? "local" : "deterministic";
@@ -178,6 +189,7 @@ export async function generateAdaptiveResponse(
           contextVersion: xoria.contextVersion,
         },
         performance: getPerformanceSnapshot(),
+        omni,
         memoryContextIds: memoryAssembly.suppliedMemoryIds,
         reflection: { decision: reflection.decision, terminationReason: reflection.terminationReason, iterations: reflection.iterations, operations: reflection.operations, records: reflection.records },
         receipt: localResult.receipt,
