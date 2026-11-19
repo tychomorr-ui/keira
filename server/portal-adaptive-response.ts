@@ -24,6 +24,8 @@ import { gateResponseWithSemanticEvaluation, type EvidenceGateResult } from "./e
 import { runXoriaPlan, type XoriaConvergence } from "./xoria-fabric";
 import { beginPerformanceSpan, getPerformanceSnapshot } from "./performance-fabric";
 import { convergeOmni, type OmniConvergence } from "./omni-convergence";
+import { assessHistoricalIntegrity } from "./historical-integrity";
+import { assessTemporalEvidence } from "./temporal-truth";
 
 export interface AdaptiveResponse {
   strategy: DialogueStrategy;
@@ -144,12 +146,19 @@ export async function generateAdaptiveResponse(
     const semanticSpan = beginPerformanceSpan("SEMANTIC_EVALUATION");
     const evidenceGate = await gateResponseWithSemanticEvaluation(generatedResponse, modelOptions?.mistEvidence ?? []);
     semanticSpan.finish(true);
+    const evidenceByCid = new Map((modelOptions?.mistEvidence ?? []).map((artifact) => [artifact.cid, artifact]));
     const omni = convergeOmni({
       requestId: xoria.requestId,
       correlationId: xoria.correlationId,
       contextVersion: xoria.contextVersion,
       branches: xoria.branches.map((branch) => ({ id: branch.dimension, status: branch.status === "COMPLETED" ? "COMPLETED" : branch.status === "TIMED_OUT" ? "TIMED_OUT" : "FAILED", uncertainty: branch.uncertainties })),
-      claims: evidenceGate.claims.map((claim) => ({ id: claim.claimId, semantic: claim.semantic?.classification ?? (claim.status === "SUPPORTED" ? "ENTAILED" : "UNVERIFIED"), integrity: "UNVERIFIED", temporal: "TEMPORALLY_UNKNOWN" })),
+      claims: evidenceGate.claims.map((claim) => {
+        const cited = claim.citedCids.map((cid) => evidenceByCid.get(cid)).filter((artifact): artifact is MistEvidenceArtifact => Boolean(artifact));
+        const assessments = cited.map((artifact) => assessHistoricalIntegrity({ artifactId: artifact.cid, content: artifact.snippet, preservedHash: artifact.contentSha256 }));
+        const integrity = assessments.some((assessment) => assessment.state === "INTEGRITY_FAILED") ? "INTEGRITY_FAILED" : assessments.length > 0 && assessments.every((assessment) => assessment.state === "CRYPTOGRAPHIC_VERIFIED") ? "CRYPTOGRAPHIC_VERIFIED" : "UNVERIFIED";
+        const temporal = cited.length > 0 ? assessTemporalEvidence(cited[0]?.temporal ?? {}).status : "TEMPORALLY_UNKNOWN";
+        return { id: claim.claimId, semantic: claim.semantic?.classification ?? (claim.status === "SUPPORTED" ? "ENTAILED" : "UNVERIFIED"), integrity, temporal };
+      }),
       ssoState: "EXECUTED",
       authorization: "AUTHORIZED",
     });

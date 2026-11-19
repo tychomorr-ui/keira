@@ -46,10 +46,13 @@ export function truncateToSentences(value: string, maximum: number): string {
   return matches.slice(0, maximum).join("").trim();
 }
 
+import type { TemporalEvidence } from "./temporal-truth";
+
 export type MistEvidenceArtifact = {
   cid: string;
   snippet: string;
   contentSha256?: string | null;
+  temporal?: TemporalEvidence;
 };
 
 export function formatMistEvidence(artifacts: MistEvidenceArtifact[]): string {
