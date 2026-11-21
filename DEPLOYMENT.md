@@ -55,3 +55,38 @@ Production secrets belong in the operator-controlled secret store or protected h
 KEIRA Intelligence is not VALKYRIE, ROOT-GATE, ATMOS, Tesseract-A Core, or Tesseract-Terminus. It provides intelligence and bounded local reasoning; it does not issue mesh authority, certify legal outcomes, or prove remote node health.
 
 Historical provider-specific deployment references are retired and are not current KEIRA deployment instructions.
+
+## Authenticated federation endpoints
+
+KEIRA includes bounded HTTP adapters for local federation. They are disabled unless `KEIRA_FEDERATION_SHARED_SECRET` is configured. The secret is used only for HMAC-SHA256 envelope verification; it does not grant execution authority.
+
+```text
+POST /api/nexal/events
+  Header: x-nexal-signature: <HMAC-SHA256 hex>
+  Body: signed NEXAL event envelope
+
+POST /api/sso/report
+  Body: SSO report envelope with its `signature` field
+```
+
+The SSO receiver accepts fresh, signed remote observations and rejects stale context, nonce reuse, invalid signatures, self-originated reports, and remote attempts to grant `AUTHORIZED`, `EXECUTED`, or `POSTCONDITION-VERIFIED` state locally. NEXAL delivery is separate from execution authority.
+
+Set these only in the protected production environment when a trusted peer is configured:
+
+```text
+KEIRA_FEDERATION_SHARED_SECRET=<random 32-byte-or-longer shared secret>
+KEIRA_NODE_ID=keira
+KEIRA_RUNTIME_VERSION=<release identifier>
+KEIRA_CONTEXT_VERSION=1
+```
+
+Generate a secret without printing it into shell history:
+
+```bash
+umask 077
+FEDERATION_SECRET="$(openssl rand -hex 32)"
+printf '%s\n' "$FEDERATION_SECRET" > /root/keira-federation-secret.txt
+chmod 600 /root/keira-federation-secret.txt
+```
+
+Do not expose the secret in logs, URLs, Git, or browser code. Do not expose port `11434` or the federation endpoints without Nginx/TLS and peer-level access controls. The endpoint adapters are tested locally; live peer-to-peer federation requires the corresponding peer configuration and network path.

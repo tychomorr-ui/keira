@@ -15,6 +15,10 @@ import { signTrajectoryHandler } from "../trajectory-attestation";
 import { streamPortalMessage } from "../portal-chat-stream";
 import { getLocalModelEnvironmentStatus } from "./env";
 import { searchStoredCorpusEvidence } from "../corpus-ingestion";
+import { NexalInbox } from "../nexal-fabric";
+import { createNexalHttpReceiver } from "../nexal-transport";
+import { SsoFederationReceiver } from "../sso-federation";
+import { createSovereignState } from "../sovereign-state";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -52,6 +56,36 @@ async function startServer() {
   app.use(express.json({ limit: "4mb" }));
   app.use(express.urlencoded({ limit: "4mb", extended: true }));
   registerStorageProxy(app);
+  const federationSecret = process.env.KEIRA_FEDERATION_SHARED_SECRET?.trim();
+  const nexalInbox = new NexalInbox(Number(process.env.KEIRA_CONTEXT_VERSION || "1"));
+  if (federationSecret) {
+    app.post("/api/nexal/events", async (req, res) => {
+      await createNexalHttpReceiver(nexalInbox, federationSecret)(req, res);
+    });
+    app.post("/api/sso/report", (req, res) => {
+      const localState = createSovereignState({
+        identity: process.env.KEIRA_NODE_ID || "keira",
+        component: "sovereign-runtime",
+        version: process.env.KEIRA_RUNTIME_VERSION || "unknown",
+        operationalState: "UNVERIFIED",
+        lifecycleState: "CONFIGURED",
+        evidenceState: "UNKNOWN",
+        integrityState: "UNVERIFIED",
+        temporalState: "TEMPORALLY_UNKNOWN",
+        authorityState: "UNAUTHORIZED",
+        dependencies: [],
+        capabilities: ["observe-sso"],
+        constraints: ["remote-report-cannot-grant-local-authority"],
+        provenance: ["local-sso-receiver"],
+      });
+      const receiver = new SsoFederationReceiver(process.env.KEIRA_NODE_ID || "keira", federationSecret, Number(process.env.KEIRA_CONTEXT_VERSION || "1"));
+      const result = receiver.apply(req.body, localState);
+      res.status(result.accepted ? 200 : 409).json(result);
+    });
+    console.log("[KEIRA] Authenticated NEXAL/SSO federation endpoints enabled");
+  } else {
+    console.log("[KEIRA] NEXAL/SSO federation endpoints disabled: KEIRA_FEDERATION_SHARED_SECRET is not configured");
+  }
   app.get("/api/beta-status", betaOpenStatusHandler);
   app.get("/api/keira-identity/health", keiraIdentityRootSecretHealthHandler);
   app.post("/api/keira/sign-trajectory", (req, res) => signTrajectoryHandler(req, res));
